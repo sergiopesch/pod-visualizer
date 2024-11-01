@@ -34,7 +34,7 @@ Welcome to Pod Visualizer - Your audio visualization tool! 🚀
 
 ## 🛠️ Built With
 
-- [v0](https://v0.dev/)
+- [v0](https://v0.dev/) - Chat with v0. Generate UI with simple text prompts. Copy, paste, ship.
 - [Next.js](https://nextjs.org/) - The React framework for production
 - [React](https://reactjs.org/) - A JavaScript library for building user interfaces
 - [Tailwind CSS](https://tailwindcss.com/) - A utility-first CSS framework
