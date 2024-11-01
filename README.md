@@ -14,7 +14,7 @@ Welcome to Pod Visualizer - Your audio visualization tool! 🚀
 1. Clone the repository
 
    ```
-   git clone https://github.com/yourusername/pod-visualizer.git
+   git clone https://github.com/sergiopesch/pod-visualizer.git
    ```
 
 2. Install dependencies
