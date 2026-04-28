@@ -1,12 +1,16 @@
 import "./globals.css";
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import localFont from "next/font/local";
 
-const inter = Inter({ subsets: ["latin"] });
+const geistSans = localFont({
+  src: "./fonts/GeistVF.woff",
+  variable: "--font-geist-sans",
+});
 
 export const metadata: Metadata = {
-  title: "Pod Visualizer",
-  description: "Audio visualization and editing tool",
+  title: "Podcast Asset Studio",
+  description:
+    "One-page podcast and video asset generator for YouTube, Spotify, X, and TikTok.",
 };
 
 export default function RootLayout({
@@ -15,8 +19,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="light">
-      <body className={inter.className}>{children}</body>
+    <html lang="en" className="dark">
+      <body className={geistSans.className}>{children}</body>
     </html>
   );
 }

@@ -1,49 +1,38 @@
-# 🎧 Pod Visualizer 🎵
+# Podcast Asset Studio
 
-Welcome to Pod Visualizer - Your audio visualization tool! 🚀
+A one-page production workspace for creating podcast and video launch assets across four high-priority creator platforms: YouTube, Spotify, X, and TikTok.
 
-## 🌟 Features
+## What It Does
 
-- 📁 Drag and drop audio files
-- 🖼️ Generate cool waveform visualizations
-- 🎛️ Adjust effects and settings
-- 🎥 Export your visualizations as videos
+- Generates platform-aware visual frames, thumbnails, covers, and waveform cards.
+- Uses MrBeast-inspired packaging rules: short visual hooks, title/thumbnail curiosity gap, fast payoff, and high contrast.
+- Includes current spec notes for common creator workflows across the four platforms.
+- Produces generated titles, captions, hashtags, and a JSON production brief.
+- Supports page-wide drag and drop for local cover art and audio uploads.
+- Exports selected PNG assets or a platform pack directly from the browser.
 
-## 🚀 Getting Started
+## Platform Packs
 
-1. Clone the repository
+- YouTube: long-form master, Shorts frame, thumbnail, podcast playlist art.
+- Spotify: video podcast, show cover, episode cover, audio card.
+- X: vertical video, square timeline clip, launch card, quote card.
+- TikTok: vertical cut, hook frame, square fallback, profile tile.
 
-   ```
-   git clone https://github.com/sergiopesch/pod-visualizer.git
-   ```
+Spec snapshot in the UI was verified on April 28, 2026 using official platform documentation.
 
-2. Install dependencies
+## Getting Started
 
-   ```
-   cd pod-visualizer
-   npm install
-   ```
+```bash
+npm install
+npm run dev
+```
 
-3. Run the development server
+Open [http://localhost:3000](http://localhost:3000).
 
-   ```
-   npm run dev
-   ```
+## Validation
 
-4. Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+```bash
+npm run build
+```
 
-## 🛠️ Built With
-
-- [v0](https://v0.dev/) - Chat with v0. Generate UI with simple text prompts. Copy, paste, ship.
-- [Next.js](https://nextjs.org/) - The React framework for production
-- [React](https://reactjs.org/) - A JavaScript library for building user interfaces
-- [Tailwind CSS](https://tailwindcss.com/) - A utility-first CSS framework
-- [shadcn/ui](https://ui.shadcn.com/) - Re-usable components built with Radix UI and Tailwind CSS
-
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
-
-## 🙏 Acknowledgments
-
-- My gorgeous wife & daughter
+The app is built with Next.js, React, Tailwind CSS, Radix UI primitives, and lucide-react icons.
