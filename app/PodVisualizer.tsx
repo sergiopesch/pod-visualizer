@@ -11,15 +11,21 @@ import {
 import { siSpotify, siX, siYoutube } from "simple-icons";
 import { useDropzone } from "react-dropzone";
 import {
-  Activity,
   CheckCircle2,
   Clipboard,
   Copy,
   Download,
+  Eye,
+  EyeOff,
   ExternalLink,
   Image as ImageIcon,
+  Layers,
   Mic2,
   Music2,
+  Plus,
+  RotateCcw,
+  Trash2,
+  Type,
   UploadCloud,
   Video,
 } from "lucide-react";
@@ -88,6 +94,25 @@ type GeneratedCopy = {
   caption: string;
   hashtags: string[];
   prompt: string;
+};
+
+type VisualLayerId =
+  | "artwork"
+  | "badge"
+  | "headline"
+  | "title"
+  | "hook"
+  | "cta"
+  | "waveform"
+  | "footer";
+
+type VisualLayerState = Record<VisualLayerId, boolean>;
+
+type VisualLayerSpec = {
+  id: VisualLayerId;
+  label: string;
+  description: string;
+  kind: "media" | "text" | "system";
 };
 
 const SPEC_VERIFIED_AT = "April 28, 2026";
@@ -372,6 +397,68 @@ const DEFAULT_WAVEFORM = Array.from({ length: 96 }, (_, index) => {
   return Math.min(1, Math.max(0.14, 0.52 + wave));
 });
 
+const DEFAULT_VISUAL_LAYERS: VisualLayerState = {
+  artwork: true,
+  badge: true,
+  headline: true,
+  title: true,
+  hook: true,
+  cta: false,
+  waveform: true,
+  footer: true,
+};
+
+const VISUAL_LAYER_SPECS: VisualLayerSpec[] = [
+  {
+    id: "artwork",
+    label: "Artwork",
+    description: "Background image and hero media frame",
+    kind: "media",
+  },
+  {
+    id: "badge",
+    label: "Platform badge",
+    description: "Format and platform marker",
+    kind: "system",
+  },
+  {
+    id: "headline",
+    label: "Thumbnail hook",
+    description: "Large visual promise text",
+    kind: "text",
+  },
+  {
+    id: "title",
+    label: "Episode title",
+    description: "Secondary title line",
+    kind: "text",
+  },
+  {
+    id: "hook",
+    label: "Hook copy",
+    description: "Short payoff or setup line",
+    kind: "text",
+  },
+  {
+    id: "cta",
+    label: "CTA",
+    description: "Compact action prompt",
+    kind: "text",
+  },
+  {
+    id: "waveform",
+    label: "Waveform",
+    description: "Audio-driven waveform strip",
+    kind: "media",
+  },
+  {
+    id: "footer",
+    label: "Footer",
+    description: "Show name and dimensions",
+    kind: "system",
+  },
+];
+
 type PackagingPreset = {
   id: string;
   name: string;
@@ -388,7 +475,7 @@ type StyleVars = CSSProperties & Record<`--${string}`, string | number>;
 
 const TONE_OPTIONS = [
   "High Retention",
-  "Extreme Promise",
+  "Direct Promise",
   "Founder Mode",
   "Premium Documentary",
   "Calm Expert",
@@ -396,8 +483,8 @@ const TONE_OPTIONS = [
 
 const PACKAGING_PRESETS: PackagingPreset[] = [
   {
-    id: "extreme-promise",
-    name: "Extreme Promise",
+    id: "direct-promise",
+    name: "Direct promise",
     title: "I Built a Podcast Asset Machine in 7 Days",
     thumbnailText: "3 PLATFORMS",
     hook: "One recording becomes every YouTube, Spotify, and X asset before the episode goes live.",
@@ -407,13 +494,13 @@ const PACKAGING_PRESETS: PackagingPreset[] = [
     secondaryColor: "#31c7d4",
   },
   {
-    id: "curiosity-gap",
-    name: "Curiosity Gap",
+    id: "curiosity",
+    name: "Curiosity",
     title: "This Changed My Podcast Workflow",
     thumbnailText: "WAIT...",
     hook: "The hidden bottleneck was not editing. It was packaging the episode for every platform.",
-    callToAction: "Steal the workflow and test the hook.",
-    tone: "Extreme Promise",
+    callToAction: "Review the workflow and test the hook.",
+    tone: "Direct Promise",
     primaryColor: "#ff3b8d",
     secondaryColor: "#35f2ff",
   },
@@ -429,8 +516,8 @@ const PACKAGING_PRESETS: PackagingPreset[] = [
     secondaryColor: "#ffd400",
   },
   {
-    id: "human-stakes",
-    name: "Human Stakes",
+    id: "problem-solution",
+    name: "Problem / solution",
     title: "The Fastest Way to Stop Losing Clips",
     thumbnailText: "STOP THIS",
     hook: "Most creators lose reach after recording because the next step is too slow.",
@@ -484,6 +571,14 @@ function ratioLabel(width: number, height: number) {
   return width === height ? "square" : width > height ? "landscape" : "vertical";
 }
 
+function getLayerSpec(id: VisualLayerId) {
+  return VISUAL_LAYER_SPECS.find((layer) => layer.id === id) ?? VISUAL_LAYER_SPECS[0];
+}
+
+function getVisibleLayers(layers?: VisualLayerState) {
+  return layers ?? DEFAULT_VISUAL_LAYERS;
+}
+
 function buildGeneratedCopy(form: StudioForm, platform: PlatformConfig): GeneratedCopy {
   const title = form.episodeTitle.trim() || "Untitled episode";
   const hook =
@@ -523,7 +618,8 @@ function buildGeneratedCopy(form: StudioForm, platform: PlatformConfig): Generat
 function buildProductionBrief(
   form: StudioForm,
   platform: PlatformConfig,
-  copy: GeneratedCopy
+  copy: GeneratedCopy,
+  layers: VisualLayerState = DEFAULT_VISUAL_LAYERS
 ) {
   return {
     verifiedSpecSnapshot: SPEC_VERIFIED_AT,
@@ -542,6 +638,11 @@ function buildProductionBrief(
       tone: form.tone,
       colors: [form.primaryColor, form.secondaryColor],
     },
+    visualLayers: VISUAL_LAYER_SPECS.map((layer) => ({
+      id: layer.id,
+      label: layer.label,
+      enabled: layers[layer.id],
+    })),
     generatedCopy: copy,
     assets: platform.assets.map((asset) => ({
       name: asset.name,
@@ -759,6 +860,7 @@ async function makeAssetCanvas({
   copy,
   waveform,
   waveformDensity,
+  layers,
   artworkUrl,
 }: {
   asset: AssetSpec;
@@ -767,6 +869,7 @@ async function makeAssetCanvas({
   copy: GeneratedCopy;
   waveform: number[];
   waveformDensity: number;
+  layers?: VisualLayerState;
   artworkUrl: string | null;
 }) {
   const canvas = document.createElement("canvas");
@@ -783,7 +886,8 @@ async function makeAssetCanvas({
   const title = copy.title;
   const thumbnailText = form.thumbnailText.trim() || title;
   const subtitle = form.hook;
-  const artworkImage = artworkUrl ? await loadImage(artworkUrl) : null;
+  const activeLayers = getVisibleLayers(layers);
+  const artworkImage = activeLayers.artwork && artworkUrl ? await loadImage(artworkUrl) : null;
 
   const background = ctx.createLinearGradient(0, 0, width, height);
   background.addColorStop(0, "#050505");
@@ -831,97 +935,138 @@ async function makeAssetCanvas({
     artY = pad * 1.05;
   }
 
-  ctx.save();
-  roundedRect(ctx, artX, artY, artWidth, artHeight, Math.max(20, minSide * 0.028));
-  ctx.clip();
-  if (artworkImage) {
-    drawCoverImage(ctx, artworkImage, artX, artY, artWidth, artHeight);
-    ctx.fillStyle = "rgba(5, 5, 5, 0.34)";
-    ctx.fillRect(artX, artY, artWidth, artHeight);
-  } else {
-    drawFallbackArtwork(ctx, artX, artY, artWidth, artHeight, form, platform);
-  }
-  ctx.restore();
+  if (activeLayers.artwork) {
+    ctx.save();
+    roundedRect(ctx, artX, artY, artWidth, artHeight, Math.max(20, minSide * 0.028));
+    ctx.clip();
+    if (artworkImage) {
+      drawCoverImage(ctx, artworkImage, artX, artY, artWidth, artHeight);
+      ctx.fillStyle = "rgba(5, 5, 5, 0.34)";
+      ctx.fillRect(artX, artY, artWidth, artHeight);
+    } else {
+      drawFallbackArtwork(ctx, artX, artY, artWidth, artHeight, form, platform);
+    }
+    ctx.restore();
 
-  ctx.strokeStyle = "rgba(248, 250, 252, 0.26)";
-  ctx.lineWidth = Math.max(2, minSide * 0.003);
-  roundedRect(ctx, artX, artY, artWidth, artHeight, Math.max(20, minSide * 0.028));
-  ctx.stroke();
+    ctx.strokeStyle = "rgba(248, 250, 252, 0.26)";
+    ctx.lineWidth = Math.max(2, minSide * 0.003);
+    roundedRect(ctx, artX, artY, artWidth, artHeight, Math.max(20, minSide * 0.028));
+    ctx.stroke();
+  }
 
   const isVertical = orientation === "vertical";
   const isSquare = orientation === "square";
   const pillX = pad;
-  const pillY = orientation === "landscape" ? pad * 1.55 : artY + artHeight + pad * 0.34;
-  ctx.fillStyle = "rgba(248, 250, 252, 0.1)";
-  roundedRect(ctx, pillX, pillY, Math.min(width * 0.42, 420), minSide * 0.052, minSide * 0.026);
-  ctx.fill();
-  ctx.fillStyle = platform.accent;
-  ctx.font = `800 ${Math.max(18, minSide * 0.022)}px Inter, Arial, sans-serif`;
-  ctx.fillText(
-    `${platform.name.toUpperCase()}  ${asset.ratio}  ${asset.useCase.toUpperCase()}`,
-    pillX + minSide * 0.028,
-    pillY + minSide * 0.035
-  );
+  const pillY = orientation === "landscape"
+    ? pad * 1.55
+    : activeLayers.artwork
+      ? artY + artHeight + pad * 0.34
+      : pad * 1.25;
+
+  if (activeLayers.badge) {
+    ctx.fillStyle = "rgba(248, 250, 252, 0.1)";
+    roundedRect(ctx, pillX, pillY, Math.min(width * 0.46, 500), minSide * 0.052, minSide * 0.026);
+    ctx.fill();
+    ctx.fillStyle = platform.accent;
+    ctx.font = `800 ${Math.max(18, minSide * 0.022)}px Inter, Arial, sans-serif`;
+    ctx.fillText(
+      `${platform.name.toUpperCase()}  ${asset.ratio}  ${asset.useCase.toUpperCase()}`,
+      pillX + minSide * 0.028,
+      pillY + minSide * 0.035
+    );
+  }
 
   const textX = pad;
   const waveHeight = isSquare
     ? Math.max(44, minSide * 0.082)
     : Math.max(44, minSide * 0.11);
   const waveY = height - pad - waveHeight;
-  const titleY = orientation === "landscape" ? height * 0.36 : pillY + minSide * 0.105;
+  const titleY = orientation === "landscape"
+    ? activeLayers.badge ? height * 0.36 : pad * 1.8
+    : activeLayers.badge ? pillY + minSide * 0.105 : pillY;
   const textMaxWidth =
-    orientation === "landscape" ? width - artWidth - pad * 3 : width - pad * 2;
-  const textBottomLimit = waveY - minSide * (isSquare ? 0.11 : 0.09);
+    orientation === "landscape" && activeLayers.artwork
+      ? width - artWidth - pad * 3
+      : width - pad * 2;
+  const textBottomLimit = activeLayers.waveform
+    ? waveY - minSide * (isSquare ? 0.11 : 0.09)
+    : height - pad * (activeLayers.footer ? 1.25 : 0.7);
   const availableTextHeight = Math.max(minSide * 0.18, textBottomLimit - titleY);
   const titleSize = orientation === "landscape"
     ? Math.min(104, height * 0.095)
     : Math.min(isSquare ? 118 : 132, width * (isSquare ? 0.085 : 0.105));
-  const titleHeight = drawTextBlock(
-    ctx,
-    thumbnailText,
-    textX,
-    titleY,
-    textMaxWidth,
-    titleSize,
-    orientation === "landscape" ? 3 : isSquare ? 2 : 3,
-    "#f8fafc"
-  );
+  let currentTextY = titleY;
+
+  if (activeLayers.headline) {
+    currentTextY += drawTextBlock(
+      ctx,
+      thumbnailText,
+      textX,
+      currentTextY,
+      textMaxWidth,
+      titleSize,
+      orientation === "landscape" ? 3 : isSquare ? 2 : 3,
+      "#f8fafc"
+    );
+    currentTextY += minSide * (isSquare ? 0.038 : 0.048);
+  }
 
   const titleMetaSize = Math.max(20, minSide * (isSquare ? 0.026 : 0.032));
-  ctx.font = `600 ${titleMetaSize}px Inter, Arial, sans-serif`;
-  ctx.fillStyle = "rgba(248, 250, 252, 0.72)";
-  const titleLines = wrapLines(ctx, title, textMaxWidth, 1);
-  const titleMetaY = titleY + titleHeight + minSide * (isSquare ? 0.038 : 0.048);
-  titleLines.forEach((line, index) => {
-    ctx.fillText(line, textX, titleMetaY + index * titleMetaSize * 1.18);
-  });
+  if (activeLayers.title) {
+    ctx.font = `600 ${titleMetaSize}px Inter, Arial, sans-serif`;
+    ctx.fillStyle = "rgba(248, 250, 252, 0.72)";
+    const titleLines = wrapLines(ctx, title, textMaxWidth, activeLayers.headline ? 1 : 2);
+    titleLines.forEach((line, index) => {
+      ctx.fillText(line, textX, currentTextY + index * titleMetaSize * 1.18);
+    });
+    currentTextY += titleLines.length * titleMetaSize * 1.28 + minSide * 0.02;
+  }
 
   const subtitleSize = Math.max(18, minSide * (isSquare ? 0.022 : 0.026));
-  const subtitleY = titleMetaY + titleMetaSize * 1.45;
   const subtitleLineHeight = subtitleSize * 1.34;
   const subtitleMaxLines = Math.max(
     0,
-    Math.min(isVertical ? 3 : 2, Math.floor((availableTextHeight - (subtitleY - titleY)) / subtitleLineHeight))
+    Math.min(
+      isVertical ? 3 : 2,
+      Math.floor((availableTextHeight - (currentTextY - titleY)) / subtitleLineHeight)
+    )
   );
-  if (subtitleMaxLines > 0) {
+  if (activeLayers.hook && subtitleMaxLines > 0) {
     ctx.font = `500 ${subtitleSize}px Inter, Arial, sans-serif`;
     ctx.fillStyle = "rgba(248, 250, 252, 0.62)";
     const subtitleLines = wrapLines(ctx, subtitle, textMaxWidth, subtitleMaxLines);
     subtitleLines.forEach((line, index) => {
-      ctx.fillText(line, textX, subtitleY + index * subtitleLineHeight);
+      ctx.fillText(line, textX, currentTextY + index * subtitleLineHeight);
     });
+    currentTextY += subtitleLines.length * subtitleLineHeight + minSide * 0.04;
   }
 
-  drawWaveform(ctx, waveform, pad, waveY, width - pad * 2, waveHeight, form.primaryColor, waveformDensity);
+  if (activeLayers.cta) {
+    const ctaText = form.callToAction.trim() || "Listen to the full episode";
+    const ctaHeight = Math.max(34, minSide * 0.056);
+    ctx.font = `800 ${Math.max(16, minSide * 0.022)}px Inter, Arial, sans-serif`;
+    const ctaWidth = Math.min(textMaxWidth, Math.max(minSide * 0.34, ctx.measureText(ctaText).width + minSide * 0.08));
+    ctx.fillStyle = "rgba(248, 250, 252, 0.1)";
+    roundedRect(ctx, textX, currentTextY, ctaWidth, ctaHeight, ctaHeight / 2);
+    ctx.fill();
+    ctx.fillStyle = form.primaryColor;
+    ctx.fillText(ctaText, textX + minSide * 0.04, currentTextY + ctaHeight * 0.64);
+  }
 
-  ctx.fillStyle = "rgba(248, 250, 252, 0.78)";
-  ctx.font = `700 ${Math.max(18, minSide * 0.024)}px Inter, Arial, sans-serif`;
-  ctx.fillText(form.showName || "Podcast Studio", pad, height - pad * 0.36);
+  if (activeLayers.waveform) {
+    drawWaveform(ctx, waveform, pad, waveY, width - pad * 2, waveHeight, form.primaryColor, waveformDensity);
+  }
 
-  ctx.textAlign = "right";
-  ctx.fillStyle = platform.accentSoft;
-  ctx.fillText(`${asset.width}x${asset.height}`, width - pad, height - pad * 0.36);
-  ctx.textAlign = "left";
+  if (activeLayers.footer) {
+    ctx.fillStyle = "rgba(248, 250, 252, 0.78)";
+    ctx.font = `700 ${Math.max(18, minSide * 0.024)}px Inter, Arial, sans-serif`;
+    ctx.fillText(form.showName || "Podcast Studio", pad, height - pad * 0.36);
+
+    ctx.textAlign = "right";
+    ctx.fillStyle = platform.accentSoft;
+    ctx.fillText(`${asset.width}x${asset.height}`, width - pad, height - pad * 0.36);
+    ctx.textAlign = "left";
+  }
 
   return canvas;
 }
@@ -962,6 +1107,7 @@ async function makeContactSheetCanvas({
   copy,
   waveform,
   waveformDensity,
+  layers,
   artworkUrl,
 }: {
   platform: PlatformConfig;
@@ -969,6 +1115,7 @@ async function makeContactSheetCanvas({
   copy: GeneratedCopy;
   waveform: number[];
   waveformDensity: number;
+  layers?: VisualLayerState;
   artworkUrl: string | null;
 }) {
   const canvas = document.createElement("canvas");
@@ -1041,6 +1188,7 @@ async function makeContactSheetCanvas({
       copy,
       waveform,
       waveformDensity,
+      layers,
       artworkUrl,
     });
     const assetRatio = asset.width / asset.height;
@@ -1093,6 +1241,8 @@ export function PodVisualizer() {
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [waveform, setWaveform] = useState(DEFAULT_WAVEFORM);
   const [waveformDensity, setWaveformDensity] = useState(72);
+  const [visualLayers, setVisualLayers] = useState<VisualLayerState>(DEFAULT_VISUAL_LAYERS);
+  const [selectedLayerId, setSelectedLayerId] = useState<VisualLayerId>("headline");
   const [showSafeZones, setShowSafeZones] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [statusMessage, setStatusMessage] = useState("Ready to create the first asset pack.");
@@ -1109,19 +1259,14 @@ export function PodVisualizer() {
     [form, platform]
   );
   const productionBrief = useMemo(
-    () => buildProductionBrief(form, platform, generatedCopy),
-    [form, generatedCopy, platform]
+    () => buildProductionBrief(form, platform, generatedCopy, visualLayers),
+    [form, generatedCopy, platform, visualLayers]
   );
   const customArtworkUrl = artworkFile && artworkUrl ? artworkUrl : null;
   const activeArtworkUrl = customArtworkUrl ?? platform.thumbnailSrc;
-  const packFiles = useMemo(
-    () =>
-      platform.assets.map((asset) => ({
-        asset,
-        filename: assetFilename(form, platform, asset),
-      })),
-    [form, platform]
-  );
+  const selectedLayer = getLayerSpec(selectedLayerId);
+  const activeLayerCount = VISUAL_LAYER_SPECS.filter((layer) => visualLayers[layer.id]).length;
+  const hiddenLayerCount = VISUAL_LAYER_SPECS.length - activeLayerCount;
 
   useEffect(() => {
     if (!artworkFile) {
@@ -1223,6 +1368,27 @@ export function PodVisualizer() {
     setForm((current) => ({ ...current, [key]: value }));
   };
 
+  const selectPlatform = (nextPlatformId: PlatformId) => {
+    const nextPlatform = getPlatform(nextPlatformId);
+    setSelectedPlatformId(nextPlatformId);
+    setSelectedAssetId(nextPlatform.assets[0]?.id ?? selectedAssetId);
+    setStatusMessage(`${nextPlatform.name} workspace selected.`);
+  };
+
+  const setLayerVisibility = (layerId: VisualLayerId, isVisible: boolean) => {
+    setVisualLayers((current) => ({ ...current, [layerId]: isVisible }));
+    setSelectedLayerId(layerId);
+    setStatusMessage(
+      `${getLayerSpec(layerId).label} ${isVisible ? "added to" : "removed from"} the visual.`
+    );
+  };
+
+  const resetLayers = () => {
+    setVisualLayers(DEFAULT_VISUAL_LAYERS);
+    setSelectedLayerId("headline");
+    setStatusMessage("Default visual layers restored.");
+  };
+
   const applyPackagingPreset = (preset: PackagingPreset) => {
     setForm((current) => ({
       ...current,
@@ -1259,6 +1425,7 @@ export function PodVisualizer() {
         copy,
         waveform,
         waveformDensity,
+        layers: visualLayers,
         artworkUrl: customArtworkUrl ?? targetPlatform.thumbnailSrc,
       });
       const filename = assetFilename(form, targetPlatform, asset);
@@ -1284,6 +1451,7 @@ export function PodVisualizer() {
           copy: generatedCopy,
           waveform,
           waveformDensity,
+          layers: visualLayers,
           artworkUrl: activeArtworkUrl,
         });
         const filename = assetFilename(form, platform, asset);
@@ -1310,6 +1478,7 @@ export function PodVisualizer() {
         copy: generatedCopy,
         waveform,
         waveformDensity,
+        layers: visualLayers,
         artworkUrl: activeArtworkUrl,
       });
       downloadCanvas(
@@ -1366,8 +1535,12 @@ export function PodVisualizer() {
       passed: true,
     },
     {
-      label: audioFile ? "Source audio waveform loaded" : "Fallback waveform ready",
-      passed: true,
+      label: audioFile ? "Source audio waveform layer active" : "Fallback waveform layer active",
+      passed: visualLayers.waveform,
+    },
+    {
+      label: `${activeLayerCount} visual layers active`,
+      passed: visualLayers.headline || visualLayers.title || visualLayers.artwork,
     },
   ];
 
@@ -1404,123 +1577,78 @@ export function PodVisualizer() {
         </div>
       )}
       <div className="mx-auto flex min-h-screen w-full max-w-[min(1720px,100vw)] flex-col overflow-x-hidden px-4 py-4 sm:px-6 lg:px-8">
-        <header className="flex flex-col gap-4 border-b border-white/10 pb-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-md bg-[#1ed760] text-black">
-                <Activity className="h-5 w-5" />
+        <header className="sticky top-0 z-30 border-b border-white/10 bg-[#050505]/95 py-3 backdrop-blur">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+            <div className="min-w-0">
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
+                Podcast Asset Studio
+              </p>
+              <h1 className="truncate text-xl font-black leading-tight sm:text-2xl">
+                {form.episodeTitle || "Untitled episode"}
+              </h1>
+            </div>
+
+            <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
+              <div className="flex rounded-md border border-white/10 bg-white/[0.035] p-1">
+                {PLATFORM_CONFIGS.map((item) => {
+                  const isSelected = item.id === selectedPlatformId;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => selectPlatform(item.id)}
+                      aria-label={`Select ${item.name}`}
+                      title={item.primaryUse}
+                      className={cn(
+                        "inline-flex h-10 w-12 items-center justify-center rounded-sm text-zinc-400 transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1ed760]",
+                        isSelected && "bg-white text-black"
+                      )}
+                    >
+                      <PlatformIcon id={item.id} className="h-4 w-4" />
+                    </button>
+                  );
+                })}
               </div>
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#1ed760]">
-                  Packaging Lab
-                </p>
-                <h1 className="text-3xl font-black leading-none tracking-normal sm:text-5xl">
-                  Build the pack. Test the click.
-                </h1>
+
+              <Select value={selectedAsset.id} onValueChange={setSelectedAssetId}>
+                <SelectTrigger className="min-w-[220px] border-white/10 bg-white/[0.035] text-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {platform.assets.map((asset) => (
+                    <SelectItem key={asset.id} value={asset.id}>
+                      {asset.name} / {asset.ratio}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={open}
+                  className="border-white/10 bg-transparent text-white hover:bg-white/8 hover:text-white"
+                >
+                  <UploadCloud className="h-4 w-4" />
+                  Media
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => void exportSelectedAsset()}
+                  disabled={isExporting}
+                  className="bg-white text-black hover:bg-[#1ed760]"
+                >
+                  <Download className="h-4 w-4" />
+                  Export
+                </Button>
               </div>
             </div>
-            <p className="max-w-4xl text-sm leading-6 text-zinc-400 sm:text-base">
-              Three focused platform packs for YouTube, Spotify, and X with
-              high-contrast packaging, short hooks, safe zones, AI thumbnail
-              art, waveform cards, and export-ready briefs.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 text-xs text-zinc-400 sm:grid-cols-4 lg:min-w-[560px]">
-            <button
-              type="button"
-              onClick={open}
-              className="rounded-md border border-white/10 bg-white/4 px-4 py-3 text-left transition hover:border-[#1ed760]"
-            >
-              <div className="text-2xl font-black text-white">Drop</div>
-              <div className="mt-1 uppercase tracking-[0.16em]">media</div>
-            </button>
-            <button
-              type="button"
-              onClick={() => void exportPlatformPack()}
-              disabled={isExporting}
-              className="rounded-md border border-white/10 bg-white/4 px-4 py-3 text-left transition hover:border-[#1ed760] disabled:opacity-50"
-            >
-              <div className="text-2xl font-black text-white">{platform.assets.length}</div>
-              <div className="mt-1 uppercase tracking-[0.16em]">exports</div>
-            </button>
-            <button
-              type="button"
-              onClick={() => void copyBrief()}
-              className="rounded-md border border-white/10 bg-white/4 px-4 py-3 text-left transition hover:border-[#1ed760]"
-            >
-              <div className="text-2xl font-black text-white">{readinessScore}%</div>
-              <div className="mt-1 uppercase tracking-[0.16em]">brief</div>
-            </button>
-            <a
-              href={platform.sourceUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="rounded-md border border-white/10 bg-white/4 px-4 py-3 text-left transition hover:border-[#1ed760]"
-            >
-              <div className="text-2xl font-black text-white">2026</div>
-              <div className="mt-1 uppercase tracking-[0.16em]">source</div>
-            </a>
           </div>
         </header>
 
-        <section className="grid w-full max-w-[calc(100vw-2rem)] grid-cols-1 gap-2 py-3 sm:max-w-none sm:grid-cols-3 lg:gap-3 lg:py-4">
-          {PLATFORM_CONFIGS.map((item) => {
-            const isSelected = item.id === selectedPlatformId;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => setSelectedPlatformId(item.id)}
-                title={item.primaryUse}
-                className={cn(
-                  "min-w-0 overflow-hidden rounded-md border p-3 text-left transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1ed760] sm:p-4",
-                  isSelected
-                    ? "border-white/30 bg-white/9"
-                    : "border-white/10 bg-white/[0.035] hover:bg-white/6"
-                )}
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div
-                    className="relative flex h-9 w-9 items-center justify-center rounded-md bg-white text-(--platform-color)"
-                    style={styleVars({ "--platform-color": `#${PLATFORM_ICONS[item.id].hex}` })}
-                  >
-                    <PlatformIcon id={item.id} className="relative h-5 w-5" />
-                  </div>
-                  <span className="rounded-full border border-white/10 px-2 py-1 text-[10px] font-bold uppercase text-zinc-400 sm:text-[11px]">
-                    {item.assets.length} assets
-                  </span>
-                </div>
-                <div
-                  aria-label={item.thumbnailAlt}
-                  className="mt-3 aspect-video overflow-hidden rounded-md border border-white/10 bg-cover bg-center"
-                  role="img"
-                  style={{ backgroundImage: `url(${item.thumbnailSrc})` }}
-                >
-                  <div className="flex h-full items-end bg-linear-to-t from-black/75 via-black/10 to-transparent p-3">
-                    <span className="rounded-full bg-black/70 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-white">
-                      AI thumbnail
-                    </span>
-                  </div>
-                </div>
-                <h2 className="mt-3 text-lg font-black sm:mt-4 sm:text-xl">{item.name}</h2>
-                <div className="mt-4 flex min-w-0 flex-wrap gap-2">
-                  {item.capabilityTags.slice(0, 2).map((tag) => (
-                    <span
-                      key={tag}
-                      className="rounded-full bg-white/6 px-2.5 py-1 text-[11px] text-zinc-300 sm:text-xs"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </button>
-            );
-          })}
-        </section>
-
-        <section className="grid w-full max-w-[calc(100vw-2rem)] flex-1 gap-4 sm:max-w-none xl:grid-cols-[360px_minmax(520px,1fr)_400px]">
-          <aside className="order-2 min-w-0 space-y-4 rounded-md border border-white/10 bg-[#0c0c0c] p-4 xl:order-1">
+        <section className="grid w-full max-w-[calc(100vw-2rem)] flex-1 gap-4 pt-4 sm:max-w-none xl:grid-cols-[320px_minmax(520px,1fr)_340px]">
+          <aside className="order-2 min-w-0 space-y-3 rounded-md border border-white/10 bg-[#0a0a0a] p-3 xl:order-1">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
@@ -1576,23 +1704,233 @@ export function PodVisualizer() {
               </div>
             </button>
 
-            <div className="grid gap-2">
-              <div className="flex items-center justify-between">
-                <Label>Packaging preset</Label>
-                <span className="text-xs text-zinc-500">MrBeast-style rules</span>
+            <div className="rounded-md border border-white/10 bg-white/[0.035] p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
+                    Click editor
+                  </p>
+                  <h3 className="mt-1 flex items-center gap-2 font-black">
+                    <Layers className="h-4 w-4 text-[#1ed760]" />
+                    Visual layers
+                  </h3>
+                </div>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="outline"
+                  onClick={resetLayers}
+                  title="Restore default layers"
+                  className="h-9 w-9 border-white/10 bg-transparent text-white hover:bg-white/8 hover:text-white"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                </Button>
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                {PACKAGING_PRESETS.map((preset) => (
-                  <button
-                    key={preset.id}
+
+              <div className="mt-3 grid gap-2">
+                {VISUAL_LAYER_SPECS.map((layer) => {
+                  const isVisible = visualLayers[layer.id];
+                  const isSelected = selectedLayerId === layer.id;
+
+                  return (
+                    <div
+                      key={layer.id}
+                      className={cn(
+                        "grid grid-cols-[1fr_auto] items-center gap-2 rounded-md border p-2 transition",
+                        isSelected
+                          ? "border-[#1ed760]/60 bg-[#1ed760]/10"
+                          : "border-white/10 bg-black/20"
+                      )}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setSelectedLayerId(layer.id)}
+                        className="min-w-0 text-left"
+                      >
+                        <div className="flex items-center gap-2">
+                          {layer.kind === "text" ? (
+                            <Type className="h-3.5 w-3.5 text-zinc-500" />
+                          ) : layer.kind === "media" ? (
+                            <ImageIcon className="h-3.5 w-3.5 text-zinc-500" />
+                          ) : (
+                            <Eye className="h-3.5 w-3.5 text-zinc-500" />
+                          )}
+                          <span className="truncate text-sm font-bold text-zinc-100">
+                            {layer.label}
+                          </span>
+                        </div>
+                        <p className="mt-1 truncate text-xs text-zinc-500">
+                          {layer.description}
+                        </p>
+                      </button>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant={isVisible ? "outline" : "secondary"}
+                        onClick={() => setLayerVisibility(layer.id, !isVisible)}
+                        title={isVisible ? `Remove ${layer.label}` : `Add ${layer.label}`}
+                        className={cn(
+                          "h-9 w-9",
+                          isVisible
+                            ? "border-white/10 bg-transparent text-white hover:bg-red-500/15 hover:text-white"
+                            : "bg-white text-black hover:bg-[#1ed760]"
+                        )}
+                      >
+                        {isVisible ? <Trash2 className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="mt-3 rounded-md border border-white/10 bg-black/25 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-black">{selectedLayer.label}</p>
+                    <p className="mt-1 text-xs text-zinc-500">
+                      {visualLayers[selectedLayerId] ? "Active on canvas" : "Removed from canvas"}
+                    </p>
+                  </div>
+                  <Button
                     type="button"
-                    onClick={() => applyPackagingPreset(preset)}
-                    className="rounded-md border border-white/10 bg-white/4 px-3 py-2 text-left text-xs font-bold text-zinc-200 transition hover:border-[#1ed760] hover:bg-[#1ed760]/10"
+                    size="sm"
+                    variant={visualLayers[selectedLayerId] ? "outline" : "secondary"}
+                    onClick={() => setLayerVisibility(selectedLayerId, !visualLayers[selectedLayerId])}
+                    className={cn(
+                      visualLayers[selectedLayerId]
+                        ? "border-white/10 bg-transparent text-white hover:bg-white/8 hover:text-white"
+                        : "bg-white text-black hover:bg-[#1ed760]"
+                    )}
                   >
-                    {preset.name}
-                  </button>
-                ))}
+                    {visualLayers[selectedLayerId] ? (
+                      <>
+                        <EyeOff className="h-4 w-4" />
+                        Remove
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="h-4 w-4" />
+                        Add
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                {selectedLayerId === "headline" && (
+                  <Input
+                    value={form.thumbnailText}
+                    onChange={(event) => setFormValue("thumbnailText", event.target.value)}
+                    className="mt-3 border-white/10 bg-white/4 text-white"
+                  />
+                )}
+                {selectedLayerId === "title" && (
+                  <Input
+                    value={form.episodeTitle}
+                    onChange={(event) => setFormValue("episodeTitle", event.target.value)}
+                    className="mt-3 border-white/10 bg-white/4 text-white"
+                  />
+                )}
+                {selectedLayerId === "hook" && (
+                  <textarea
+                    value={form.hook}
+                    onChange={(event) => setFormValue("hook", event.target.value)}
+                    rows={3}
+                    className="mt-3 min-h-20 w-full resize-none rounded-md border border-white/10 bg-white/4 px-3 py-2 text-sm text-white outline-hidden ring-offset-background placeholder:text-zinc-600 focus-visible:ring-2 focus-visible:ring-[#1ed760]"
+                  />
+                )}
+                {selectedLayerId === "cta" && (
+                  <Input
+                    value={form.callToAction}
+                    onChange={(event) => setFormValue("callToAction", event.target.value)}
+                    className="mt-3 border-white/10 bg-white/4 text-white"
+                  />
+                )}
+                {selectedLayerId === "footer" && (
+                  <Input
+                    value={form.showName}
+                    onChange={(event) => setFormValue("showName", event.target.value)}
+                    className="mt-3 border-white/10 bg-white/4 text-white"
+                  />
+                )}
+                {selectedLayerId === "waveform" && (
+                  <div className="mt-3 grid gap-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <Label>Density</Label>
+                      <span className="text-xs text-zinc-500">{waveformDensity}</span>
+                    </div>
+                    <Slider
+                      min={24}
+                      max={96}
+                      step={6}
+                      value={[waveformDensity]}
+                      onValueChange={(value) => setWaveformDensity(value[0] ?? 72)}
+                    />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={open}
+                      className="bg-white text-black hover:bg-[#1ed760]"
+                    >
+                      <Mic2 className="h-4 w-4" />
+                      Replace audio
+                    </Button>
+                  </div>
+                )}
+                {selectedLayerId === "artwork" && (
+                  <div className="mt-3 grid gap-2">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={open}
+                      className="bg-white text-black hover:bg-[#1ed760]"
+                    >
+                      <ImageIcon className="h-4 w-4" />
+                      Replace artwork
+                    </Button>
+                    {artworkFile && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setArtworkFile(null);
+                          setArtworkUrl(null);
+                          setStatusMessage("Custom artwork cleared. Platform artwork is active.");
+                        }}
+                        className="border-white/10 bg-transparent text-white hover:bg-white/8 hover:text-white"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Clear upload
+                      </Button>
+                    )}
+                  </div>
+                )}
               </div>
+
+              <p className="mt-3 text-xs text-zinc-500">
+                {activeLayerCount} active, {hiddenLayerCount} removed. Click a preview element to select it.
+              </p>
+            </div>
+
+            <div className="grid gap-2">
+              <Label>Creative direction</Label>
+              <Select
+                value=""
+                onValueChange={(value) => {
+                  const preset = PACKAGING_PRESETS.find((item) => item.id === value);
+                  if (preset) applyPackagingPreset(preset);
+                }}
+              >
+                <SelectTrigger className="border-white/10 bg-white/4 text-white">
+                  <SelectValue placeholder="Choose a starting point" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PACKAGING_PRESETS.map((preset) => (
+                    <SelectItem key={preset.id} value={preset.id}>
+                      {preset.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="grid gap-3">
@@ -1763,10 +2101,12 @@ export function PodVisualizer() {
                 )}
                 style={previewVars}
               >
-                <div
-                  className="absolute inset-0 bg-cover bg-center opacity-[0.38]"
-                  style={{ backgroundImage: `url(${activeArtworkUrl})` }}
-                />
+                {visualLayers.artwork && (
+                  <div
+                    className="absolute inset-0 bg-cover bg-center opacity-[0.38]"
+                    style={{ backgroundImage: `url(${activeArtworkUrl})` }}
+                  />
+                )}
                 <div
                   className="asset-preview-gradient absolute inset-0"
                 />
@@ -1774,21 +2114,27 @@ export function PodVisualizer() {
                   className="absolute left-0 top-0 h-full w-[1.4%] bg-(--studio-accent)"
                 />
 
-                <div
-                  className={cn(
-                    "absolute overflow-hidden rounded-md border border-white/20 bg-white/5 shadow-xl",
-                    orientation === "landscape"
-                      ? "right-[6%] top-[10%] h-[50%] w-[31%]"
-                      : "left-[8%] top-[7%] h-[29%] w-[84%]"
-                  )}
-                >
-                  <div
-                    aria-label={artworkFile ? "Uploaded artwork" : platform.thumbnailAlt}
-                    className="h-full w-full bg-cover bg-center"
-                    role="img"
-                    style={{ backgroundImage: `url(${activeArtworkUrl})` }}
-                  />
-                </div>
+                {visualLayers.artwork && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedLayerId("artwork")}
+                    className={cn(
+                      "absolute overflow-hidden rounded-md border bg-white/5 text-left shadow-xl transition",
+                      selectedLayerId === "artwork" ? "border-[#1ed760]" : "border-white/20",
+                      orientation === "landscape"
+                        ? "right-[6%] top-[10%] h-[50%] w-[31%]"
+                        : "left-[8%] top-[7%] h-[29%] w-[84%]"
+                    )}
+                    title="Select artwork"
+                  >
+                    <span
+                      aria-label={artworkFile ? "Uploaded artwork" : platform.thumbnailAlt}
+                      className="block h-full w-full bg-cover bg-center"
+                      role="img"
+                      style={{ backgroundImage: `url(${activeArtworkUrl})` }}
+                    />
+                  </button>
+                )}
 
                 {showSafeZones && (
                   <div
@@ -1803,199 +2149,175 @@ export function PodVisualizer() {
                   />
                 )}
 
-                <div
-                  className={cn(
-                    "absolute flex flex-col",
-                    orientation === "landscape"
-                      ? "bottom-[44%] left-[7%] right-[8%] top-[15%] sm:bottom-[30%] sm:right-[43%]"
-                      : "bottom-[25%] left-[8%] right-[8%] top-[41%]"
-                  )}
-                >
-                  <div className="w-fit rounded-full bg-white/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-zinc-200">
-                    {platform.name} / {selectedAsset.ratio}
-                  </div>
-                  <h3
+                {(visualLayers.badge ||
+                  visualLayers.headline ||
+                  visualLayers.title ||
+                  visualLayers.hook ||
+                  visualLayers.cta) && (
+                  <div
                     className={cn(
-                      "mt-3 line-clamp-2 text-balance font-black leading-[0.9] text-white",
+                      "absolute flex flex-col",
                       orientation === "landscape"
-                        ? "text-2xl sm:text-[44px]"
-                        : "text-4xl sm:text-6xl"
+                        ? "bottom-[34%] left-[7%] right-[8%] top-[15%] sm:right-[43%]"
+                        : visualLayers.artwork
+                          ? "bottom-[24%] left-[8%] right-[8%] top-[41%]"
+                          : "bottom-[24%] left-[8%] right-[8%] top-[13%]"
                     )}
                   >
-                    {form.thumbnailText || generatedCopy.title}
-                  </h3>
-                  <p className="mt-3 hidden max-w-2xl text-sm font-black leading-5 text-zinc-200 sm:line-clamp-1 sm:block">
-                    {generatedCopy.title}
-                  </p>
-                </div>
+                    {visualLayers.badge && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedLayerId("badge")}
+                        className={cn(
+                          "w-fit rounded-full border bg-white/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-zinc-200 transition",
+                          selectedLayerId === "badge" ? "border-[#1ed760]" : "border-transparent"
+                        )}
+                      >
+                        {platform.name} / {selectedAsset.ratio}
+                      </button>
+                    )}
+                    {visualLayers.headline && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedLayerId("headline")}
+                        className={cn(
+                          "mt-3 rounded-sm border text-left transition",
+                          selectedLayerId === "headline" ? "border-[#1ed760]/70" : "border-transparent"
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "line-clamp-2 text-balance font-black leading-[0.9] text-white",
+                            orientation === "landscape"
+                              ? "text-2xl sm:text-[44px]"
+                              : "text-4xl sm:text-6xl"
+                          )}
+                        >
+                          {form.thumbnailText || generatedCopy.title}
+                        </span>
+                      </button>
+                    )}
+                    {visualLayers.title && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedLayerId("title")}
+                        className={cn(
+                          "mt-3 hidden max-w-2xl rounded-sm border text-left text-sm font-black leading-5 text-zinc-200 transition sm:line-clamp-1 sm:block",
+                          selectedLayerId === "title" ? "border-[#1ed760]/70" : "border-transparent"
+                        )}
+                      >
+                        {generatedCopy.title}
+                      </button>
+                    )}
+                    {visualLayers.hook && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedLayerId("hook")}
+                        className={cn(
+                          "mt-2 hidden max-w-2xl rounded-sm border text-left text-xs font-semibold leading-5 text-zinc-300/80 transition sm:line-clamp-2 sm:block",
+                          selectedLayerId === "hook" ? "border-[#1ed760]/70" : "border-transparent"
+                        )}
+                      >
+                        {form.hook}
+                      </button>
+                    )}
+                    {visualLayers.cta && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedLayerId("cta")}
+                        className={cn(
+                          "mt-3 w-fit rounded-full border bg-white/10 px-3 py-1.5 text-xs font-black text-(--studio-primary) transition",
+                          selectedLayerId === "cta" ? "border-[#1ed760]" : "border-white/10"
+                        )}
+                      >
+                        {form.callToAction}
+                      </button>
+                    )}
+                  </div>
+                )}
 
-                <div className="absolute inset-x-[7%] bottom-[5%]">
-                  <div className="flex h-7 items-center gap-[3px] sm:h-12">
-                    {waveform.slice(0, waveformDensity).map((peak, index) => (
-                      <span
-                        key={index}
-                        className="block h-(--bar-height) flex-1 rounded-full bg-(--bar-color)"
-                        style={styleVars({
-                          "--bar-height": px(Math.max(6, peak * 30)),
-                          "--bar-color": index % 7 === 0 ? "#f8fafc" : form.primaryColor,
-                        })}
-                      />
-                    ))}
+                {(visualLayers.waveform || visualLayers.footer) && (
+                  <div className="absolute inset-x-[7%] bottom-[5%]">
+                    {visualLayers.waveform && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedLayerId("waveform")}
+                        className={cn(
+                          "flex h-7 w-full items-center gap-[3px] rounded-sm border transition sm:h-12",
+                          selectedLayerId === "waveform" ? "border-[#1ed760]/70" : "border-transparent"
+                        )}
+                        title="Select waveform"
+                      >
+                        {waveform.slice(0, waveformDensity).map((peak, index) => (
+                          <span
+                            key={index}
+                            className="block h-(--bar-height) flex-1 rounded-full bg-(--bar-color)"
+                            style={styleVars({
+                              "--bar-height": px(Math.max(6, peak * 30)),
+                              "--bar-color": index % 7 === 0 ? "#f8fafc" : form.primaryColor,
+                            })}
+                          />
+                        ))}
+                      </button>
+                    )}
+                    {visualLayers.footer && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedLayerId("footer")}
+                        className={cn(
+                          "mt-3 flex w-full items-center justify-between gap-3 rounded-sm border text-left text-xs font-bold uppercase tracking-[0.16em] text-zinc-400 transition",
+                          selectedLayerId === "footer" ? "border-[#1ed760]/70" : "border-transparent"
+                        )}
+                      >
+                        <span>{form.showName}</span>
+                        <span>{selectedAsset.width}x{selectedAsset.height}</span>
+                      </button>
+                    )}
                   </div>
-                  <div className="mt-3 flex items-center justify-between gap-3 text-xs font-bold uppercase tracking-[0.16em] text-zinc-400">
-                    <span>{form.showName}</span>
-                    <span>{selectedAsset.width}x{selectedAsset.height}</span>
-                  </div>
-                </div>
+                )}
               </div>
             </div>
 
-            <div className="border-t border-white/10 p-4 sm:p-5">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
-                    Pack review
-                  </p>
-                  <h2 className="mt-1 text-xl font-black">
-                    Contact sheet before download
-                  </h2>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => void exportContactSheet()}
-                    disabled={isExporting}
-                    className="bg-white text-black hover:bg-[#1ed760]"
-                  >
-                    <ImageIcon className="h-4 w-4" />
-                    Contact Sheet
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={() => void exportPlatformPack()}
-                    disabled={isExporting}
-                    className="bg-[#1ed760] text-black hover:bg-[#b9fbc0]"
-                  >
-                    <Download className="h-4 w-4" />
-                    Export Pack
-                  </Button>
-                </div>
+            <div className="flex flex-col gap-3 border-t border-white/10 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+              <div className="min-w-0">
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-500">
+                  Current export
+                </p>
+                <p className="mt-1 truncate text-sm font-bold text-zinc-200">
+                  {assetFilename(form, platform, selectedAsset)}
+                </p>
               </div>
-
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                {packFiles.map(({ asset, filename }) => {
-                  const isSelected = asset.id === selectedAsset.id;
-                  const itemOrientation = ratioLabel(asset.width, asset.height);
-
-                  return (
-                    <button
-                      key={asset.id}
-                      type="button"
-                      onClick={() => setSelectedAssetId(asset.id)}
-                      className={cn(
-                        "min-w-0 rounded-md border p-3 text-left transition",
-                        isSelected
-                          ? "border-white/30 bg-white/9"
-                          : "border-white/10 bg-white/[0.035] hover:bg-white/6"
-                      )}
-                    >
-                      <div
-                        className={cn(
-                          "relative mx-auto w-full overflow-hidden rounded-md border border-white/10 bg-[#111] aspect-(--pack-ratio)",
-                          itemOrientation === "vertical" && "max-w-28",
-                          itemOrientation === "square" && "max-w-40",
-                          itemOrientation === "landscape" && "max-w-full"
-                        )}
-                        style={styleVars({
-                          "--pack-ratio": `${asset.width} / ${asset.height}`,
-                          "--studio-primary": form.primaryColor,
-                          "--studio-secondary": form.secondaryColor,
-                          "--studio-accent": platform.accent,
-                          "--studio-accent-soft": platform.accentSoft,
-                        })}
-                      >
-                        <div
-                          className="absolute inset-0 bg-cover bg-center opacity-40"
-                          style={{ backgroundImage: `url(${activeArtworkUrl})` }}
-                        />
-                        <div className="asset-preview-gradient absolute inset-0" />
-                        <div className="absolute left-0 top-0 h-full w-[2.4%] bg-(--studio-accent)" />
-                        <div
-                          className={cn(
-                            "absolute overflow-hidden rounded-sm border border-white/20 bg-white/5",
-                            itemOrientation === "landscape"
-                              ? "right-[7%] top-[12%] h-[44%] w-[30%]"
-                              : "left-[9%] top-[8%] h-[27%] w-[82%]"
-                          )}
-                        >
-                          <div
-                            className="h-full w-full bg-cover bg-center"
-                            style={{ backgroundImage: `url(${activeArtworkUrl})` }}
-                          />
-                        </div>
-                        <div
-                          className={cn(
-                            "absolute left-[8%] right-[8%] overflow-hidden",
-                            itemOrientation === "landscape"
-                              ? "bottom-[22%] right-[43%] top-[20%]"
-                              : "bottom-[30%] top-[43%]"
-                          )}
-                        >
-                          <div className="w-fit rounded-full bg-white/10 px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.12em] text-zinc-200">
-                            {asset.ratio}
-                          </div>
-                          <div
-                            className={cn(
-                              "mt-1 line-clamp-2 font-black leading-none text-white",
-                              itemOrientation === "landscape" ? "text-lg" : "text-base"
-                            )}
-                          >
-                            {form.thumbnailText || asset.name}
-                          </div>
-                        </div>
-                        <div className="absolute inset-x-[8%] bottom-[8%] flex h-4 items-center gap-0.5">
-                          {waveform.slice(0, 28).map((peak, index) => (
-                            <span
-                              key={index}
-                              className="block h-(--bar-height) flex-1 rounded-full bg-(--bar-color)"
-                              style={styleVars({
-                                "--bar-height": px(Math.max(3, peak * 15)),
-                                "--bar-color": index % 7 === 0 ? "#f8fafc" : form.primaryColor,
-                              })}
-                            />
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="mt-3 flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <h3 className="truncate text-sm font-black">{asset.name}</h3>
-                          <p className="mt-1 text-xs text-zinc-500">
-                            {asset.width} x {asset.height} / {asset.useCase}
-                          </p>
-                        </div>
-                        <span className="shrink-0 rounded-full bg-white/6 px-2 py-1 text-[11px] font-bold text-zinc-300">
-                          {asset.kind}
-                        </span>
-                      </div>
-                      <p className="mt-2 truncate rounded-md bg-black/30 px-2 py-1.5 font-mono text-[11px] text-zinc-500">
-                        {filename}
-                      </p>
-                    </button>
-                  );
-                })}
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => void exportContactSheet()}
+                  disabled={isExporting}
+                  className="border-white/10 bg-transparent text-white hover:bg-white/8 hover:text-white"
+                >
+                  <ImageIcon className="h-4 w-4" />
+                  Sheet
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => void exportPlatformPack()}
+                  disabled={isExporting}
+                  className="bg-[#1ed760] text-black hover:bg-[#b9fbc0]"
+                >
+                  <Download className="h-4 w-4" />
+                  Pack
+                </Button>
               </div>
             </div>
           </section>
 
-          <aside className="order-3 min-w-0 space-y-4 rounded-md border border-white/10 bg-[#0c0c0c] p-4">
+          <aside className="order-3 min-w-0 space-y-3 rounded-md border border-white/10 bg-[#0a0a0a] p-3">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
-                  Output
+                  Navigate
                 </p>
-                <h2 className="mt-1 text-xl font-black">Asset matrix</h2>
+                <h2 className="mt-1 text-xl font-black">Assets</h2>
               </div>
               <a
                 href={platform.sourceUrl}
@@ -2016,9 +2338,9 @@ export function PodVisualizer() {
                   <button
                     key={asset.id}
                     type="button"
-                    onClick={() => setSelectedAssetId(asset.id)}
-                    className={cn(
-                      "rounded-md border p-3 text-left transition",
+                  onClick={() => setSelectedAssetId(asset.id)}
+                  className={cn(
+                      "rounded-md border px-3 py-2 text-left transition",
                       isSelected
                         ? "border-white/30 bg-white/9"
                         : "border-white/10 bg-white/[0.035] hover:bg-white/6"
@@ -2036,45 +2358,20 @@ export function PodVisualizer() {
                           )}
                           <h3 className="font-bold">{asset.name}</h3>
                         </div>
-                        <p className="mt-1 text-xs text-zinc-500">{asset.useCase}</p>
+                        <p className="mt-1 text-xs text-zinc-500">
+                          {asset.width} x {asset.height}
+                        </p>
                       </div>
                       <span className="rounded-full bg-white/6 px-2 py-1 text-[11px] font-bold text-zinc-300">
                         {asset.ratio}
                       </span>
-                    </div>
-                    <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-zinc-400">
-                      <span>{asset.width} x {asset.height}</span>
-                      <span>{asset.exportLabel}</span>
                     </div>
                   </button>
                 );
               })}
             </div>
 
-            <div className="rounded-md border border-white/10 bg-white/[0.035] p-4">
-              <div className="flex items-center justify-between gap-3">
-                <h3 className="font-black">Spec rules</h3>
-                <span className="text-xs text-zinc-500">
-                  Tap to copy
-                </span>
-              </div>
-              <ul className="mt-3 space-y-2">
-                {selectedAsset.requirements.map((requirement) => (
-                  <li key={requirement}>
-                    <button
-                      type="button"
-                      onClick={() => void copyText("Requirement", requirement)}
-                      className="flex w-full gap-2 rounded-md px-2 py-1.5 text-left text-sm leading-5 text-zinc-300 transition hover:bg-white/6"
-                    >
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#1ed760]" />
-                    <span>{requirement}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="rounded-md border border-white/10 bg-white/[0.035] p-4">
+            <div className="rounded-md border border-white/10 bg-white/[0.035] p-3">
               <div className="flex items-center justify-between">
                 <h3 className="font-black">Release checks</h3>
                 <span className="text-sm font-black text-[#1ed760]">{readinessScore}%</span>
@@ -2085,8 +2382,8 @@ export function PodVisualizer() {
                   style={previewVars}
                 />
               </div>
-              <ul className="mt-3 space-y-2">
-                {checks.map((check) => (
+              <ul className="mt-3 space-y-1.5">
+                {checks.slice(0, 4).map((check) => (
                   <li key={check.label} className="flex items-start gap-2 text-sm text-zinc-300">
                     <CheckCircle2
                       className={cn(
@@ -2100,9 +2397,9 @@ export function PodVisualizer() {
               </ul>
             </div>
 
-            <div className="rounded-md border border-white/10 bg-white/[0.035] p-4">
-              <h3 className="font-black">Generated copy</h3>
-              <div className="mt-3 space-y-3 text-sm text-zinc-300">
+            <div className="rounded-md border border-white/10 bg-white/[0.035] p-3">
+              <h3 className="font-black">Copy</h3>
+              <div className="mt-3 space-y-2 text-sm text-zinc-300">
                 <button
                   type="button"
                   onClick={() => void copyText("Title", generatedCopy.title)}
@@ -2121,7 +2418,7 @@ export function PodVisualizer() {
                   <p className="text-xs font-bold uppercase tracking-[0.16em] text-zinc-500">
                     Caption
                   </p>
-                  <p className="mt-1 whitespace-pre-line">{generatedCopy.caption}</p>
+                  <p className="mt-1 line-clamp-3 whitespace-pre-line">{generatedCopy.caption}</p>
                 </button>
                 <div className="flex flex-wrap gap-2">
                   {generatedCopy.hashtags.map((tag) => (

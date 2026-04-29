@@ -212,13 +212,7 @@
   }
 
   .asset-stage {
-    background:
-      radial-gradient(
-        circle at 50% 0%,
-        color-mix(in srgb, var(--studio-accent) 16%, transparent),
-        transparent 34rem
-      ),
-      linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 38%);
+    background: #070707;
   }
 
   .asset-frame::after {

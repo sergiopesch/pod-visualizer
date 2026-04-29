@@ -79,13 +79,12 @@ async function exportAssets() {
   assert(!/tiktok/i.test(bodyText), "Rendered UI still contains TikTok");
   assert(!/four platform|4 platforms/i.test(bodyText), "Rendered UI still contains four-platform language");
 
-  const platformStrip = page.locator("section").nth(0);
   const report = [];
 
   for (const [platform, assets] of Object.entries(platformAssets)) {
-    await platformStrip
-      .locator("button")
-      .filter({ has: page.locator("h2", { hasText: new RegExp(`^${escapeRegex(platform)}$`) }) })
+    await page
+      .getByRole("button", { name: new RegExp(`^${escapeRegex(platform)}\\b`) })
+      .first()
       .click();
     await page.waitForTimeout(150);
 

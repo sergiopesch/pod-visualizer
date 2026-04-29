@@ -6,14 +6,15 @@ A one-page production workspace for creating podcast and video launch assets acr
 
 ## Product
 
-Podcast Asset Studio turns one episode idea into a platform-ready visual pack. It combines episode metadata, packaging presets, AI-generated thumbnail backgrounds, real platform brand marks, waveform styling, generated copy, and export checks in a single browser workspace.
+Podcast Asset Studio turns one episode idea into a platform-ready visual pack. It combines a compact platform switcher, asset format selector, creative direction presets, editable visual layers, waveform styling, generated copy, and export checks in a single browser workspace.
 
 The product intentionally supports only YouTube, Spotify, and X. TikTok and other platforms are out of scope.
 
 ## Features
 
 - Platform-aware asset packs for YouTube, Spotify, and X.
-- Real platform logo marks from `simple-icons`.
+- Minimal platform navigation with real logo marks from `simple-icons`.
+- Fast asset switching from the main workspace bar.
 - Bundled AI-generated thumbnail backgrounds for each supported platform.
 - Browser-based PNG export for individual assets.
 - Platform pack export for all assets in the selected platform.
@@ -21,6 +22,9 @@ The product intentionally supports only YouTube, Spotify, and X. TikTok and othe
 - Generated title, caption, hashtags, and JSON production brief.
 - Drag-and-drop local artwork and audio uploads.
 - Audio waveform fallback and decoded waveform rendering when source audio is available.
+- Creative direction presets for common packaging approaches.
+- Click-to-select visual layer editor for artwork, badges, headline text, hook copy, CTA, waveform, and footer elements.
+- One-click add/remove controls for waveform and other composition elements, reflected in preview, exports, contact sheets, and production briefs.
 - Release checks for thumbnail length, title/caption fit, platform selection, artwork, and waveform readiness.
 
 ## Platform Packs
