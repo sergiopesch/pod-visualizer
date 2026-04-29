@@ -2,11 +2,13 @@
 
 import {
   type CSSProperties,
+  type SVGProps,
   useCallback,
   useEffect,
   useMemo,
   useState,
 } from "react";
+import { siSpotify, siX, siYoutube } from "simple-icons";
 import { useDropzone } from "react-dropzone";
 import {
   Activity,
@@ -18,11 +20,8 @@ import {
   Image as ImageIcon,
   Mic2,
   Music2,
-  Radio,
   UploadCloud,
   Video,
-  X,
-  Youtube,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -39,7 +38,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 
-type PlatformId = "youtube" | "spotify" | "x" | "tiktok";
+type PlatformId = "youtube" | "spotify" | "x";
 type AssetKind = "video" | "image" | "audio";
 
 type AssetSpec = {
@@ -60,6 +59,8 @@ type PlatformConfig = {
   shortName: string;
   accent: string;
   accentSoft: string;
+  thumbnailSrc: string;
+  thumbnailAlt: string;
   sourceUrl: string;
   sourceLabel: string;
   primaryUse: string;
@@ -96,8 +97,8 @@ const DEFAULT_FORM: StudioForm = {
   hostName: "Sergio Pesch",
   episodeTitle: "I Built a Podcast Asset Machine in 7 Days",
   guestName: "Creator systems",
-  hook: "One recording becomes every platform asset before the episode goes live.",
-  thumbnailText: "4 PLATFORMS",
+  hook: "One recording becomes every YouTube, Spotify, and X asset before the episode goes live.",
+  thumbnailText: "3 PLATFORMS",
   callToAction: "Export the pack and publish today.",
   tone: "High Retention",
   primaryColor: "#ffd400",
@@ -111,6 +112,8 @@ const PLATFORM_CONFIGS: PlatformConfig[] = [
     shortName: "YT",
     accent: "#ff0033",
     accentSoft: "#ff6f61",
+    thumbnailSrc: "/ai-thumbnails/youtube-podcast-studio.webp",
+    thumbnailAlt: "AI-generated YouTube podcast thumbnail studio scene",
     sourceUrl: "https://support.google.com/youtube/answer/1722171?hl=en",
     sourceLabel: "YouTube upload encoding",
     primaryUse: "Search-led episodes, Shorts, and thumbnail testing.",
@@ -195,6 +198,8 @@ const PLATFORM_CONFIGS: PlatformConfig[] = [
     shortName: "SP",
     accent: "#1ed760",
     accentSoft: "#b9fbc0",
+    thumbnailSrc: "/ai-thumbnails/spotify-podcast-cover.webp",
+    thumbnailAlt: "AI-generated Spotify podcast cover studio scene",
     sourceUrl: "https://support.spotify.com/ws/creators/article/video-specs/",
     sourceLabel: "Spotify for Creators video specs",
     primaryUse: "Video podcasts, audio episodes, and square show identity.",
@@ -279,6 +284,8 @@ const PLATFORM_CONFIGS: PlatformConfig[] = [
     shortName: "X",
     accent: "#f8fafc",
     accentSoft: "#31c7d4",
+    thumbnailSrc: "/ai-thumbnails/x-podcast-launch-card.webp",
+    thumbnailAlt: "AI-generated X podcast launch card studio scene",
     sourceUrl:
       "https://business.x.com/en/help/campaign-setup/creative-ad-specifications",
     sourceLabel: "X creative ad specs",
@@ -358,91 +365,6 @@ const PLATFORM_CONFIGS: PlatformConfig[] = [
       },
     ],
   },
-  {
-    id: "tiktok",
-    name: "TikTok",
-    shortName: "TT",
-    accent: "#25f4ee",
-    accentSoft: "#fe2c55",
-    sourceUrl:
-      "https://ads.tiktok.com/help/article/tiktok-auction-in-feed-ads?lang=en",
-    sourceLabel: "TikTok auction in-feed ads",
-    primaryUse: "Vertical hooks, safe-zone edits, and creator-style cutdowns.",
-    capabilityTags: [
-      "9:16 short",
-      "Safe-zone captions",
-      "Hook frame",
-      "Profile-ready tile",
-    ],
-    copyLimit: 150,
-    titleLimit: 80,
-    assets: [
-      {
-        id: "tiktok-vertical",
-        name: "Vertical Cut",
-        kind: "video",
-        useCase: "Organic or in-feed clip",
-        width: 1080,
-        height: 1920,
-        ratio: "9:16",
-        exportLabel: "MP4/MOV",
-        requirements: [
-          "9:16 vertical is recommended",
-          "Use at least 540 x 960 px for non-Spark ads",
-          "File size up to 500 MB",
-          "Keep core text inside the caption-safe middle area",
-        ],
-      },
-      {
-        id: "tiktok-hook",
-        name: "Hook Frame",
-        kind: "image",
-        useCase: "First-frame retention",
-        width: 1080,
-        height: 1920,
-        ratio: "9:16",
-        exportLabel: "PNG poster",
-        requirements: [
-          "Open with the question or tension immediately",
-          "Use large type and one focal image",
-          "Avoid interface-mimicking UI",
-          "Design around overlay captions and app controls",
-        ],
-      },
-      {
-        id: "tiktok-square",
-        name: "Square Fallback",
-        kind: "video",
-        useCase: "Secondary placement",
-        width: 1080,
-        height: 1080,
-        ratio: "1:1",
-        exportLabel: "MP4/MOV / PNG frame",
-        requirements: [
-          "Square is supported for non-Spark ads",
-          "Use 640 x 640 px or higher",
-          "Keep all creative high resolution and unstretched",
-          "Use sound and coherent audio transitions",
-        ],
-      },
-      {
-        id: "tiktok-profile",
-        name: "Profile Tile Master",
-        kind: "image",
-        useCase: "Creator profile identity",
-        width: 512,
-        height: 512,
-        ratio: "1:1",
-        exportLabel: "JPG/PNG",
-        requirements: [
-          "Use this square master to prepare the 98 x 98 px profile upload",
-          "Keep the key mark inside the center 66 x 66 px",
-          "File size should stay under 50 KB",
-          "Use a simple mark, not a full thumbnail",
-        ],
-      },
-    ],
-  },
 ];
 
 const DEFAULT_WAVEFORM = Array.from({ length: 96 }, (_, index) => {
@@ -477,8 +399,8 @@ const PACKAGING_PRESETS: PackagingPreset[] = [
     id: "extreme-promise",
     name: "Extreme Promise",
     title: "I Built a Podcast Asset Machine in 7 Days",
-    thumbnailText: "4 PLATFORMS",
-    hook: "One recording becomes every platform asset before the episode goes live.",
+    thumbnailText: "3 PLATFORMS",
+    hook: "One recording becomes every YouTube, Spotify, and X asset before the episode goes live.",
     callToAction: "Export the pack and publish today.",
     tone: "High Retention",
     primaryColor: "#ffd400",
@@ -527,11 +449,31 @@ function px(value: number) {
   return `${Math.round(value * 100) / 100}px`;
 }
 
-function PlatformIcon({ id, className }: { id: PlatformId; className?: string }) {
-  if (id === "youtube") return <Youtube className={className} />;
-  if (id === "spotify") return <Radio className={className} />;
-  if (id === "x") return <X className={className} />;
-  return <Music2 className={className} />;
+const PLATFORM_ICONS = {
+  youtube: siYoutube,
+  spotify: siSpotify,
+  x: siX,
+} satisfies Record<PlatformId, { title: string; path: string; hex: string }>;
+
+function PlatformIcon({
+  id,
+  className,
+  ...props
+}: { id: PlatformId; className?: string } & SVGProps<SVGSVGElement>) {
+  const icon = PLATFORM_ICONS[id];
+
+  return (
+    <svg
+      role="img"
+      aria-label={icon.title}
+      viewBox="0 0 24 24"
+      className={className}
+      fill="currentColor"
+      {...props}
+    >
+      <path d={icon.path} />
+    </svg>
+  );
 }
 
 function getPlatform(id: PlatformId) {
@@ -561,15 +503,6 @@ function buildGeneratedCopy(form: StudioForm, platform: PlatformConfig): Generat
     };
   }
 
-  if (platform.id === "tiktok") {
-    return {
-      title: title,
-      caption: `${hook} ${cta}`,
-      hashtags: ["#podcastclip", "#creatorsoftiktok", "#learnontiktok"],
-      prompt: `Create a vertical ${form.tone.toLowerCase()} TikTok cutdown for "${title}" using the hook text "${thumbnailText}", safe-zone captions, and a save/share cue.`,
-    };
-  }
-
   if (platform.id === "spotify") {
     return {
       title: guest ? `${title} with ${guest}` : title,
@@ -596,6 +529,10 @@ function buildProductionBrief(
     verifiedSpecSnapshot: SPEC_VERIFIED_AT,
     platform: platform.name,
     source: platform.sourceUrl,
+    aiThumbnail: {
+      src: platform.thumbnailSrc,
+      description: platform.thumbnailAlt,
+    },
     project: {
       showName: form.showName,
       hostName: form.hostName,
@@ -873,7 +810,7 @@ async function makeAssetCanvas({
   ctx.globalAlpha = 1;
 
   let artX = pad;
-  let artY = pad * 1.6;
+  let artY = pad * 1.25;
   let artWidth = width - pad * 2;
   let artHeight = Math.min(height * 0.34, artWidth * 0.62);
 
@@ -882,11 +819,16 @@ async function makeAssetCanvas({
     artHeight = artWidth;
     artX = width - pad - artWidth;
     artY = pad * 1.8;
-  } else if (orientation === "square") {
+  } else if (orientation === "vertical") {
     artWidth = width - pad * 2;
-    artHeight = artWidth * 0.56;
+    artHeight = Math.min(height * 0.24, artWidth * 0.54);
     artX = pad;
-    artY = pad * 1.45;
+    artY = pad * 1.08;
+  } else if (orientation === "square") {
+    artWidth = width - pad * 1.65;
+    artHeight = Math.min(height * 0.29, artWidth * 0.48);
+    artX = pad;
+    artY = pad * 1.05;
   }
 
   ctx.save();
@@ -906,8 +848,10 @@ async function makeAssetCanvas({
   roundedRect(ctx, artX, artY, artWidth, artHeight, Math.max(20, minSide * 0.028));
   ctx.stroke();
 
-  const pillX = orientation === "landscape" ? pad : pad;
-  const pillY = orientation === "landscape" ? pad * 1.55 : artY + artHeight + pad * 0.62;
+  const isVertical = orientation === "vertical";
+  const isSquare = orientation === "square";
+  const pillX = pad;
+  const pillY = orientation === "landscape" ? pad * 1.55 : artY + artHeight + pad * 0.34;
   ctx.fillStyle = "rgba(248, 250, 252, 0.1)";
   roundedRect(ctx, pillX, pillY, Math.min(width * 0.42, 420), minSide * 0.052, minSide * 0.026);
   ctx.fill();
@@ -920,11 +864,18 @@ async function makeAssetCanvas({
   );
 
   const textX = pad;
-  const titleY = orientation === "landscape" ? height * 0.36 : pillY + minSide * 0.12;
+  const waveHeight = isSquare
+    ? Math.max(44, minSide * 0.082)
+    : Math.max(44, minSide * 0.11);
+  const waveY = height - pad - waveHeight;
+  const titleY = orientation === "landscape" ? height * 0.36 : pillY + minSide * 0.105;
   const textMaxWidth =
     orientation === "landscape" ? width - artWidth - pad * 3 : width - pad * 2;
-  const titleSize =
-    orientation === "landscape" ? Math.min(104, height * 0.095) : Math.min(132, width * 0.105);
+  const textBottomLimit = waveY - minSide * (isSquare ? 0.11 : 0.09);
+  const availableTextHeight = Math.max(minSide * 0.18, textBottomLimit - titleY);
+  const titleSize = orientation === "landscape"
+    ? Math.min(104, height * 0.095)
+    : Math.min(isSquare ? 118 : 132, width * (isSquare ? 0.085 : 0.105));
   const titleHeight = drawTextBlock(
     ctx,
     thumbnailText,
@@ -932,26 +883,35 @@ async function makeAssetCanvas({
     titleY,
     textMaxWidth,
     titleSize,
-    orientation === "landscape" ? 3 : 4,
+    orientation === "landscape" ? 3 : isSquare ? 2 : 3,
     "#f8fafc"
   );
 
-  ctx.font = `600 ${Math.max(22, minSide * 0.032)}px Inter, Arial, sans-serif`;
+  const titleMetaSize = Math.max(20, minSide * (isSquare ? 0.026 : 0.032));
+  ctx.font = `600 ${titleMetaSize}px Inter, Arial, sans-serif`;
   ctx.fillStyle = "rgba(248, 250, 252, 0.72)";
   const titleLines = wrapLines(ctx, title, textMaxWidth, 1);
+  const titleMetaY = titleY + titleHeight + minSide * (isSquare ? 0.038 : 0.048);
   titleLines.forEach((line, index) => {
-    ctx.fillText(line, textX, titleY + titleHeight + minSide * 0.048 + index * minSide * 0.044);
+    ctx.fillText(line, textX, titleMetaY + index * titleMetaSize * 1.18);
   });
 
-  ctx.font = `500 ${Math.max(20, minSide * 0.026)}px Inter, Arial, sans-serif`;
-  ctx.fillStyle = "rgba(248, 250, 252, 0.62)";
-  const subtitleLines = wrapLines(ctx, subtitle, textMaxWidth, orientation === "vertical" ? 3 : 2);
-  subtitleLines.forEach((line, index) => {
-    ctx.fillText(line, textX, titleY + titleHeight + minSide * 0.1 + index * minSide * 0.038);
-  });
+  const subtitleSize = Math.max(18, minSide * (isSquare ? 0.022 : 0.026));
+  const subtitleY = titleMetaY + titleMetaSize * 1.45;
+  const subtitleLineHeight = subtitleSize * 1.34;
+  const subtitleMaxLines = Math.max(
+    0,
+    Math.min(isVertical ? 3 : 2, Math.floor((availableTextHeight - (subtitleY - titleY)) / subtitleLineHeight))
+  );
+  if (subtitleMaxLines > 0) {
+    ctx.font = `500 ${subtitleSize}px Inter, Arial, sans-serif`;
+    ctx.fillStyle = "rgba(248, 250, 252, 0.62)";
+    const subtitleLines = wrapLines(ctx, subtitle, textMaxWidth, subtitleMaxLines);
+    subtitleLines.forEach((line, index) => {
+      ctx.fillText(line, textX, subtitleY + index * subtitleLineHeight);
+    });
+  }
 
-  const waveHeight = Math.max(44, minSide * 0.11);
-  const waveY = height - pad - waveHeight;
   drawWaveform(ctx, waveform, pad, waveY, width - pad * 2, waveHeight, form.primaryColor, waveformDensity);
 
   ctx.fillStyle = "rgba(248, 250, 252, 0.78)";
@@ -992,6 +952,138 @@ function sanitizeFilename(value: string) {
     .slice(0, 72);
 }
 
+function assetFilename(form: StudioForm, platform: PlatformConfig, asset: AssetSpec) {
+  return `${sanitizeFilename(form.episodeTitle || "podcast")}-${platform.id}-${asset.id}.png`;
+}
+
+async function makeContactSheetCanvas({
+  platform,
+  form,
+  copy,
+  waveform,
+  waveformDensity,
+  artworkUrl,
+}: {
+  platform: PlatformConfig;
+  form: StudioForm;
+  copy: GeneratedCopy;
+  waveform: number[];
+  waveformDensity: number;
+  artworkUrl: string | null;
+}) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 2400;
+  canvas.height = 1600;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas export is not supported in this browser.");
+
+  const width = canvas.width;
+  const height = canvas.height;
+  const margin = 96;
+  const gap = 44;
+  const headerHeight = 188;
+  const footerHeight = 58;
+  const cellWidth = (width - margin * 2 - gap) / 2;
+  const cellHeight = (height - margin - headerHeight - footerHeight - gap) / 2;
+
+  const background = ctx.createLinearGradient(0, 0, width, height);
+  background.addColorStop(0, "#050505");
+  background.addColorStop(0.48, "#111111");
+  background.addColorStop(1, "#07100b");
+  ctx.fillStyle = background;
+  ctx.fillRect(0, 0, width, height);
+
+  ctx.globalAlpha = 0.16;
+  ctx.fillStyle = platform.accent;
+  ctx.fillRect(0, 0, 34, height);
+  ctx.fillRect(0, height - 28, width, 28);
+  ctx.globalAlpha = 1;
+
+  ctx.fillStyle = "#f8fafc";
+  ctx.font = "900 74px Inter, Arial, sans-serif";
+  ctx.fillText(`${platform.name} Pack Review`, margin, margin + 64);
+
+  ctx.fillStyle = "rgba(248, 250, 252, 0.66)";
+  ctx.font = "600 31px Inter, Arial, sans-serif";
+  ctx.fillText(copy.title, margin, margin + 116);
+
+  ctx.textAlign = "right";
+  ctx.fillStyle = platform.accentSoft;
+  ctx.font = "900 34px Inter, Arial, sans-serif";
+  ctx.fillText(`${platform.assets.length} export-ready assets`, width - margin, margin + 64);
+  ctx.fillStyle = "rgba(248, 250, 252, 0.58)";
+  ctx.font = "700 23px Inter, Arial, sans-serif";
+  ctx.fillText(SPEC_VERIFIED_AT, width - margin, margin + 112);
+  ctx.textAlign = "left";
+
+  for (const [index, asset] of platform.assets.entries()) {
+    const column = index % 2;
+    const row = Math.floor(index / 2);
+    const x = margin + column * (cellWidth + gap);
+    const y = headerHeight + row * (cellHeight + gap);
+
+    ctx.fillStyle = "rgba(248, 250, 252, 0.055)";
+    roundedRect(ctx, x, y, cellWidth, cellHeight, 26);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(248, 250, 252, 0.14)";
+    ctx.lineWidth = 2;
+    roundedRect(ctx, x, y, cellWidth, cellHeight, 26);
+    ctx.stroke();
+
+    const previewX = x + 34;
+    const previewY = y + 34;
+    const previewWidth = cellWidth - 68;
+    const previewHeight = cellHeight - 138;
+    const assetCanvas = await makeAssetCanvas({
+      asset,
+      platform,
+      form,
+      copy,
+      waveform,
+      waveformDensity,
+      artworkUrl,
+    });
+    const assetRatio = asset.width / asset.height;
+    let drawWidth = previewWidth;
+    let drawHeight = drawWidth / assetRatio;
+
+    if (drawHeight > previewHeight) {
+      drawHeight = previewHeight;
+      drawWidth = drawHeight * assetRatio;
+    }
+
+    const drawX = previewX + (previewWidth - drawWidth) / 2;
+    const drawY = previewY + (previewHeight - drawHeight) / 2;
+    ctx.save();
+    roundedRect(ctx, drawX, drawY, drawWidth, drawHeight, 18);
+    ctx.clip();
+    ctx.drawImage(assetCanvas, drawX, drawY, drawWidth, drawHeight);
+    ctx.restore();
+    ctx.strokeStyle = "rgba(248, 250, 252, 0.28)";
+    roundedRect(ctx, drawX, drawY, drawWidth, drawHeight, 18);
+    ctx.stroke();
+
+    ctx.fillStyle = "#f8fafc";
+    ctx.font = "900 32px Inter, Arial, sans-serif";
+    ctx.fillText(asset.name, x + 34, y + cellHeight - 72);
+    ctx.fillStyle = "rgba(248, 250, 252, 0.58)";
+    ctx.font = "700 22px Inter, Arial, sans-serif";
+    ctx.fillText(`${asset.width}x${asset.height} / ${asset.ratio}`, x + 34, y + cellHeight - 34);
+    ctx.textAlign = "right";
+    ctx.fillText(assetFilename(form, platform, asset), x + cellWidth - 34, y + cellHeight - 34);
+    ctx.textAlign = "left";
+  }
+
+  ctx.fillStyle = "rgba(248, 250, 252, 0.54)";
+  ctx.font = "700 22px Inter, Arial, sans-serif";
+  ctx.fillText(form.showName || "Podcast Asset Studio", margin, height - margin * 0.42);
+  ctx.textAlign = "right";
+  ctx.fillText("YouTube / Spotify / X creator asset suite", width - margin, height - margin * 0.42);
+  ctx.textAlign = "left";
+
+  return canvas;
+}
+
 export function PodVisualizer() {
   const [selectedPlatformId, setSelectedPlatformId] = useState<PlatformId>("spotify");
   const [selectedAssetId, setSelectedAssetId] = useState("spotify-video");
@@ -1020,21 +1112,27 @@ export function PodVisualizer() {
     () => buildProductionBrief(form, platform, generatedCopy),
     [form, generatedCopy, platform]
   );
-
-  useEffect(() => {
-    if (!platform.assets.some((asset) => asset.id === selectedAssetId)) {
-      setSelectedAssetId(platform.assets[0].id);
-    }
-  }, [platform.assets, selectedAssetId]);
+  const customArtworkUrl = artworkFile && artworkUrl ? artworkUrl : null;
+  const activeArtworkUrl = customArtworkUrl ?? platform.thumbnailSrc;
+  const packFiles = useMemo(
+    () =>
+      platform.assets.map((asset) => ({
+        asset,
+        filename: assetFilename(form, platform, asset),
+      })),
+    [form, platform]
+  );
 
   useEffect(() => {
     if (!artworkFile) {
-      setArtworkUrl(null);
       return;
     }
 
     const reader = new FileReader();
-    reader.onload = () => setArtworkUrl(String(reader.result));
+    reader.onload = () => {
+      setArtworkUrl(String(reader.result));
+      setStatusMessage(`Artwork loaded from ${artworkFile.name}.`);
+    };
     reader.readAsDataURL(artworkFile);
   }, [artworkFile]);
 
@@ -1048,6 +1146,7 @@ export function PodVisualizer() {
       }
 
       try {
+        setStatusMessage(`Audio received from ${audioFile.name}. Decoding waveform...`);
         const AudioContextClass =
           window.AudioContext ||
           (window as Window & typeof globalThis & { webkitAudioContext?: typeof AudioContext })
@@ -1160,9 +1259,9 @@ export function PodVisualizer() {
         copy,
         waveform,
         waveformDensity,
-        artworkUrl,
+        artworkUrl: customArtworkUrl ?? targetPlatform.thumbnailSrc,
       });
-      const filename = `${sanitizeFilename(form.episodeTitle || "podcast")}-${targetPlatform.id}-${asset.id}.png`;
+      const filename = assetFilename(form, targetPlatform, asset);
       downloadCanvas(canvas, filename);
       setStatusMessage(`${asset.name} exported as PNG.`);
     } catch (error) {
@@ -1185,9 +1284,9 @@ export function PodVisualizer() {
           copy: generatedCopy,
           waveform,
           waveformDensity,
-          artworkUrl,
+          artworkUrl: activeArtworkUrl,
         });
-        const filename = `${sanitizeFilename(form.episodeTitle || "podcast")}-${platform.id}-${asset.id}.png`;
+        const filename = assetFilename(form, platform, asset);
         downloadCanvas(canvas, filename);
         await new Promise((resolve) => window.setTimeout(resolve, 180));
       }
@@ -1195,6 +1294,31 @@ export function PodVisualizer() {
       setStatusMessage(`${platform.name} visual pack exported.`);
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : "Pack export failed.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const exportContactSheet = async () => {
+    setIsExporting(true);
+    setStatusMessage(`Rendering ${platform.name} contact sheet...`);
+
+    try {
+      const canvas = await makeContactSheetCanvas({
+        platform,
+        form,
+        copy: generatedCopy,
+        waveform,
+        waveformDensity,
+        artworkUrl: activeArtworkUrl,
+      });
+      downloadCanvas(
+        canvas,
+        `${sanitizeFilename(form.episodeTitle || "podcast")}-${platform.id}-contact-sheet.png`
+      );
+      setStatusMessage(`${platform.name} contact sheet exported.`);
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "Contact sheet export failed.");
     } finally {
       setIsExporting(false);
     }
@@ -1238,7 +1362,7 @@ export function PodVisualizer() {
       passed: generatedCopy.caption.length <= platform.copyLimit,
     },
     {
-      label: artworkFile ? "Custom artwork loaded" : "Fallback artwork ready",
+      label: artworkFile ? "Custom artwork loaded" : "AI thumbnail background active",
       passed: true,
     },
     {
@@ -1265,13 +1389,13 @@ export function PodVisualizer() {
     <main
       {...dropRootProps}
       className={cn(
-        "min-h-screen overflow-x-hidden bg-[#050505] text-zinc-50 outline-none",
+        "min-h-screen overflow-x-hidden bg-[#050505] text-zinc-50 outline-hidden",
         isDragActive && "cursor-copy"
       )}
     >
       <input {...getInputProps()} />
       {isDragActive && (
-        <div className="pointer-events-none fixed inset-0 z-50 grid place-items-center bg-black/75 p-6 backdrop-blur-sm">
+        <div className="pointer-events-none fixed inset-0 z-50 grid place-items-center bg-black/75 p-6 backdrop-blur-xs">
           <div className="rounded-md border border-[#1ed760] bg-[#0c0c0c] px-6 py-5 text-center shadow-2xl">
             <UploadCloud className="mx-auto h-8 w-8 text-[#1ed760]" />
             <p className="mt-3 text-lg font-black">Drop media anywhere</p>
@@ -1296,8 +1420,9 @@ export function PodVisualizer() {
               </div>
             </div>
             <p className="max-w-4xl text-sm leading-6 text-zinc-400 sm:text-base">
-              Four platform packs with high-contrast packaging, short hooks,
-              safe zones, waveform cards, and export-ready briefs.
+              Three focused platform packs for YouTube, Spotify, and X with
+              high-contrast packaging, short hooks, safe zones, AI thumbnail
+              art, waveform cards, and export-ready briefs.
             </p>
           </div>
 
@@ -1305,7 +1430,7 @@ export function PodVisualizer() {
             <button
               type="button"
               onClick={open}
-              className="rounded-md border border-white/10 bg-white/[0.04] px-4 py-3 text-left transition hover:border-[#1ed760]"
+              className="rounded-md border border-white/10 bg-white/4 px-4 py-3 text-left transition hover:border-[#1ed760]"
             >
               <div className="text-2xl font-black text-white">Drop</div>
               <div className="mt-1 uppercase tracking-[0.16em]">media</div>
@@ -1314,7 +1439,7 @@ export function PodVisualizer() {
               type="button"
               onClick={() => void exportPlatformPack()}
               disabled={isExporting}
-              className="rounded-md border border-white/10 bg-white/[0.04] px-4 py-3 text-left transition hover:border-[#1ed760] disabled:opacity-50"
+              className="rounded-md border border-white/10 bg-white/4 px-4 py-3 text-left transition hover:border-[#1ed760] disabled:opacity-50"
             >
               <div className="text-2xl font-black text-white">{platform.assets.length}</div>
               <div className="mt-1 uppercase tracking-[0.16em]">exports</div>
@@ -1322,7 +1447,7 @@ export function PodVisualizer() {
             <button
               type="button"
               onClick={() => void copyBrief()}
-              className="rounded-md border border-white/10 bg-white/[0.04] px-4 py-3 text-left transition hover:border-[#1ed760]"
+              className="rounded-md border border-white/10 bg-white/4 px-4 py-3 text-left transition hover:border-[#1ed760]"
             >
               <div className="text-2xl font-black text-white">{readinessScore}%</div>
               <div className="mt-1 uppercase tracking-[0.16em]">brief</div>
@@ -1331,7 +1456,7 @@ export function PodVisualizer() {
               href={platform.sourceUrl}
               target="_blank"
               rel="noreferrer"
-              className="rounded-md border border-white/10 bg-white/[0.04] px-4 py-3 text-left transition hover:border-[#1ed760]"
+              className="rounded-md border border-white/10 bg-white/4 px-4 py-3 text-left transition hover:border-[#1ed760]"
             >
               <div className="text-2xl font-black text-white">2026</div>
               <div className="mt-1 uppercase tracking-[0.16em]">source</div>
@@ -1339,7 +1464,7 @@ export function PodVisualizer() {
           </div>
         </header>
 
-        <section className="grid w-full max-w-[calc(100vw_-_2rem)] grid-cols-2 gap-2 py-3 sm:max-w-none lg:grid-cols-4 lg:gap-3 lg:py-4">
+        <section className="grid w-full max-w-[calc(100vw-2rem)] grid-cols-1 gap-2 py-3 sm:max-w-none sm:grid-cols-3 lg:gap-3 lg:py-4">
           {PLATFORM_CONFIGS.map((item) => {
             const isSelected = item.id === selectedPlatformId;
             return (
@@ -1349,30 +1474,41 @@ export function PodVisualizer() {
                 onClick={() => setSelectedPlatformId(item.id)}
                 title={item.primaryUse}
                 className={cn(
-                  "min-w-0 overflow-hidden rounded-md border p-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1ed760] sm:p-4",
+                  "min-w-0 overflow-hidden rounded-md border p-3 text-left transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1ed760] sm:p-4",
                   isSelected
-                    ? "border-white/30 bg-white/[0.09]"
-                    : "border-white/10 bg-white/[0.035] hover:bg-white/[0.06]"
+                    ? "border-white/30 bg-white/9"
+                    : "border-white/10 bg-white/[0.035] hover:bg-white/6"
                 )}
               >
                 <div className="flex items-center justify-between gap-3">
                   <div
-                    className="relative flex h-9 w-9 items-center justify-center rounded-md text-black"
-                    style={styleVars({ "--platform-color": item.accent })}
+                    className="relative flex h-9 w-9 items-center justify-center rounded-md bg-white text-(--platform-color)"
+                    style={styleVars({ "--platform-color": `#${PLATFORM_ICONS[item.id].hex}` })}
                   >
-                    <span className="absolute h-9 w-9 rounded-md bg-[var(--platform-color)]" />
                     <PlatformIcon id={item.id} className="relative h-5 w-5" />
                   </div>
                   <span className="rounded-full border border-white/10 px-2 py-1 text-[10px] font-bold uppercase text-zinc-400 sm:text-[11px]">
                     {item.assets.length} assets
                   </span>
                 </div>
+                <div
+                  aria-label={item.thumbnailAlt}
+                  className="mt-3 aspect-video overflow-hidden rounded-md border border-white/10 bg-cover bg-center"
+                  role="img"
+                  style={{ backgroundImage: `url(${item.thumbnailSrc})` }}
+                >
+                  <div className="flex h-full items-end bg-linear-to-t from-black/75 via-black/10 to-transparent p-3">
+                    <span className="rounded-full bg-black/70 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-white">
+                      AI thumbnail
+                    </span>
+                  </div>
+                </div>
                 <h2 className="mt-3 text-lg font-black sm:mt-4 sm:text-xl">{item.name}</h2>
                 <div className="mt-4 flex min-w-0 flex-wrap gap-2">
                   {item.capabilityTags.slice(0, 2).map((tag) => (
                     <span
                       key={tag}
-                      className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] text-zinc-300 sm:text-xs"
+                      className="rounded-full bg-white/6 px-2.5 py-1 text-[11px] text-zinc-300 sm:text-xs"
                     >
                       {tag}
                     </span>
@@ -1383,7 +1519,7 @@ export function PodVisualizer() {
           })}
         </section>
 
-        <section className="grid w-full max-w-[calc(100vw_-_2rem)] flex-1 gap-4 sm:max-w-none xl:grid-cols-[360px_minmax(520px,1fr)_400px]">
+        <section className="grid w-full max-w-[calc(100vw-2rem)] flex-1 gap-4 sm:max-w-none xl:grid-cols-[360px_minmax(520px,1fr)_400px]">
           <aside className="order-2 min-w-0 space-y-4 rounded-md border border-white/10 bg-[#0c0c0c] p-4 xl:order-1">
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -1416,7 +1552,7 @@ export function PodVisualizer() {
               )}
             >
               <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-white/[0.06]">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-white/6">
                   <UploadCloud className="h-5 w-5 text-[#1ed760]" />
                 </div>
                 <div>
@@ -1451,7 +1587,7 @@ export function PodVisualizer() {
                     key={preset.id}
                     type="button"
                     onClick={() => applyPackagingPreset(preset)}
-                    className="rounded-md border border-white/10 bg-white/[0.04] px-3 py-2 text-left text-xs font-bold text-zinc-200 transition hover:border-[#1ed760] hover:bg-[#1ed760]/10"
+                    className="rounded-md border border-white/10 bg-white/4 px-3 py-2 text-left text-xs font-bold text-zinc-200 transition hover:border-[#1ed760] hover:bg-[#1ed760]/10"
                   >
                     {preset.name}
                   </button>
@@ -1466,7 +1602,7 @@ export function PodVisualizer() {
                   id="show-name"
                   value={form.showName}
                   onChange={(event) => setFormValue("showName", event.target.value)}
-                  className="border-white/10 bg-white/[0.04] text-white"
+                  className="border-white/10 bg-white/4 text-white"
                 />
               </div>
               <div className="grid gap-2">
@@ -1475,7 +1611,7 @@ export function PodVisualizer() {
                   id="host-name"
                   value={form.hostName}
                   onChange={(event) => setFormValue("hostName", event.target.value)}
-                  className="border-white/10 bg-white/[0.04] text-white"
+                  className="border-white/10 bg-white/4 text-white"
                 />
               </div>
               <div className="grid gap-2">
@@ -1484,7 +1620,7 @@ export function PodVisualizer() {
                   id="episode-title"
                   value={form.episodeTitle}
                   onChange={(event) => setFormValue("episodeTitle", event.target.value)}
-                  className="border-white/10 bg-white/[0.04] text-white"
+                  className="border-white/10 bg-white/4 text-white"
                 />
               </div>
               <div className="grid gap-2">
@@ -1493,7 +1629,7 @@ export function PodVisualizer() {
                   id="thumbnail-text"
                   value={form.thumbnailText}
                   onChange={(event) => setFormValue("thumbnailText", event.target.value)}
-                  className="border-white/10 bg-white/[0.04] text-white"
+                  className="border-white/10 bg-white/4 text-white"
                 />
               </div>
               <div className="grid gap-2">
@@ -1502,7 +1638,7 @@ export function PodVisualizer() {
                   id="guest-name"
                   value={form.guestName}
                   onChange={(event) => setFormValue("guestName", event.target.value)}
-                  className="border-white/10 bg-white/[0.04] text-white"
+                  className="border-white/10 bg-white/4 text-white"
                 />
               </div>
               <div className="grid gap-2">
@@ -1512,7 +1648,7 @@ export function PodVisualizer() {
                   value={form.hook}
                   onChange={(event) => setFormValue("hook", event.target.value)}
                   rows={4}
-                  className="min-h-24 w-full resize-none rounded-md border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white outline-none ring-offset-background placeholder:text-zinc-600 focus-visible:ring-2 focus-visible:ring-[#1ed760]"
+                  className="min-h-24 w-full resize-none rounded-md border border-white/10 bg-white/4 px-3 py-2 text-sm text-white outline-hidden ring-offset-background placeholder:text-zinc-600 focus-visible:ring-2 focus-visible:ring-[#1ed760]"
                 />
               </div>
               <div className="grid gap-2">
@@ -1521,7 +1657,7 @@ export function PodVisualizer() {
                   id="cta"
                   value={form.callToAction}
                   onChange={(event) => setFormValue("callToAction", event.target.value)}
-                  className="border-white/10 bg-white/[0.04] text-white"
+                  className="border-white/10 bg-white/4 text-white"
                 />
               </div>
             </div>
@@ -1533,7 +1669,7 @@ export function PodVisualizer() {
                   value={form.tone}
                   onValueChange={(value) => setFormValue("tone", value)}
                 >
-                  <SelectTrigger className="border-white/10 bg-white/[0.04] text-white">
+                  <SelectTrigger className="border-white/10 bg-white/4 text-white">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1554,7 +1690,7 @@ export function PodVisualizer() {
                     type="color"
                     value={form.primaryColor}
                     onChange={(event) => setFormValue("primaryColor", event.target.value)}
-                    className="h-11 border-white/10 bg-white/[0.04] p-1"
+                    className="h-11 border-white/10 bg-white/4 p-1"
                   />
                 </div>
                 <div className="grid gap-2">
@@ -1564,7 +1700,7 @@ export function PodVisualizer() {
                     type="color"
                     value={form.secondaryColor}
                     onChange={(event) => setFormValue("secondaryColor", event.target.value)}
-                    className="h-11 border-white/10 bg-white/[0.04] p-1"
+                    className="h-11 border-white/10 bg-white/4 p-1"
                   />
                 </div>
               </div>
@@ -1586,7 +1722,7 @@ export function PodVisualizer() {
           </aside>
 
           <section className="order-1 min-w-0 overflow-hidden rounded-md border border-white/10 bg-[#090909] xl:sticky xl:top-4 xl:order-2 xl:self-start">
-            <div className="flex flex-col gap-3 border-b border-white/10 bg-white/[0.025] p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-3 border-b border-white/10 bg-white/2.5 p-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
                   Preview
@@ -1598,7 +1734,7 @@ export function PodVisualizer() {
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
-                <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-2">
+                <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/4 px-3 py-2">
                   <span className="text-xs font-bold uppercase text-zinc-500">
                     Guides
                   </span>
@@ -1620,48 +1756,38 @@ export function PodVisualizer() {
             <div className="asset-stage min-w-0 overflow-hidden p-4 sm:p-5">
               <div
                 className={cn(
-                  "asset-frame relative mx-auto w-full max-w-full overflow-hidden rounded-md border border-white/15 bg-[#111] shadow-2xl [aspect-ratio:var(--preview-ratio)]",
+                  "asset-frame relative mx-auto w-full max-w-full overflow-hidden rounded-md border border-white/15 bg-[#111] shadow-2xl aspect-(--preview-ratio)",
                   orientation === "vertical" && "max-w-[360px]",
                   orientation === "square" && "max-w-[560px]",
                   orientation === "landscape" && "max-w-[900px]"
                 )}
                 style={previewVars}
               >
-                {artworkUrl && (
-                  <div
-                    className="absolute inset-0 bg-cover bg-center opacity-30"
-                    style={{ backgroundImage: `url(${artworkUrl})` }}
-                  />
-                )}
+                <div
+                  className="absolute inset-0 bg-cover bg-center opacity-[0.38]"
+                  style={{ backgroundImage: `url(${activeArtworkUrl})` }}
+                />
                 <div
                   className="asset-preview-gradient absolute inset-0"
                 />
                 <div
-                  className="absolute left-0 top-0 h-full w-[1.4%] bg-[var(--studio-accent)]"
+                  className="absolute left-0 top-0 h-full w-[1.4%] bg-(--studio-accent)"
                 />
 
                 <div
                   className={cn(
-                    "absolute overflow-hidden rounded-md border border-white/20 bg-white/[0.05] shadow-xl",
+                    "absolute overflow-hidden rounded-md border border-white/20 bg-white/5 shadow-xl",
                     orientation === "landscape"
                       ? "right-[6%] top-[10%] h-[50%] w-[31%]"
                       : "left-[8%] top-[7%] h-[29%] w-[84%]"
                   )}
                 >
-                  {artworkUrl ? (
-                    <div
-                      className="h-full w-full bg-cover bg-center"
-                      style={{ backgroundImage: `url(${artworkUrl})` }}
-                    />
-                  ) : (
-                    <div
-                      className="asset-fallback-art flex h-full w-full items-end justify-center p-5"
-                    >
-                      <span className="rounded-md bg-black/70 px-4 py-2 text-xl font-black text-white">
-                        {platform.shortName}
-                      </span>
-                    </div>
-                  )}
+                  <div
+                    aria-label={artworkFile ? "Uploaded artwork" : platform.thumbnailAlt}
+                    className="h-full w-full bg-cover bg-center"
+                    role="img"
+                    style={{ backgroundImage: `url(${activeArtworkUrl})` }}
+                  />
                 </div>
 
                 {showSafeZones && (
@@ -1681,7 +1807,7 @@ export function PodVisualizer() {
                   className={cn(
                     "absolute flex flex-col",
                     orientation === "landscape"
-                      ? "bottom-[30%] left-[7%] right-[43%] top-[15%]"
+                      ? "bottom-[44%] left-[7%] right-[8%] top-[15%] sm:bottom-[30%] sm:right-[43%]"
                       : "bottom-[25%] left-[8%] right-[8%] top-[41%]"
                   )}
                 >
@@ -1690,27 +1816,27 @@ export function PodVisualizer() {
                   </div>
                   <h3
                     className={cn(
-                      "mt-3 text-balance font-black leading-[0.9] text-white",
+                      "mt-3 line-clamp-2 text-balance font-black leading-[0.9] text-white",
                       orientation === "landscape"
-                        ? "text-4xl sm:text-[44px]"
+                        ? "text-2xl sm:text-[44px]"
                         : "text-4xl sm:text-6xl"
                     )}
                   >
                     {form.thumbnailText || generatedCopy.title}
                   </h3>
-                  <p className="mt-3 line-clamp-1 max-w-2xl text-sm font-black leading-5 text-zinc-200">
+                  <p className="mt-3 hidden max-w-2xl text-sm font-black leading-5 text-zinc-200 sm:line-clamp-1 sm:block">
                     {generatedCopy.title}
                   </p>
                 </div>
 
                 <div className="absolute inset-x-[7%] bottom-[5%]">
-                  <div className="flex h-10 items-center gap-[3px] sm:h-12">
+                  <div className="flex h-7 items-center gap-[3px] sm:h-12">
                     {waveform.slice(0, waveformDensity).map((peak, index) => (
                       <span
                         key={index}
-                        className="block h-[var(--bar-height)] flex-1 rounded-full bg-[var(--bar-color)]"
+                        className="block h-(--bar-height) flex-1 rounded-full bg-(--bar-color)"
                         style={styleVars({
-                          "--bar-height": px(Math.max(8, peak * 42)),
+                          "--bar-height": px(Math.max(6, peak * 30)),
                           "--bar-color": index % 7 === 0 ? "#f8fafc" : form.primaryColor,
                         })}
                       />
@@ -1721,6 +1847,144 @@ export function PodVisualizer() {
                     <span>{selectedAsset.width}x{selectedAsset.height}</span>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            <div className="border-t border-white/10 p-4 sm:p-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
+                    Pack review
+                  </p>
+                  <h2 className="mt-1 text-xl font-black">
+                    Contact sheet before download
+                  </h2>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => void exportContactSheet()}
+                    disabled={isExporting}
+                    className="bg-white text-black hover:bg-[#1ed760]"
+                  >
+                    <ImageIcon className="h-4 w-4" />
+                    Contact Sheet
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => void exportPlatformPack()}
+                    disabled={isExporting}
+                    className="bg-[#1ed760] text-black hover:bg-[#b9fbc0]"
+                  >
+                    <Download className="h-4 w-4" />
+                    Export Pack
+                  </Button>
+                </div>
+              </div>
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {packFiles.map(({ asset, filename }) => {
+                  const isSelected = asset.id === selectedAsset.id;
+                  const itemOrientation = ratioLabel(asset.width, asset.height);
+
+                  return (
+                    <button
+                      key={asset.id}
+                      type="button"
+                      onClick={() => setSelectedAssetId(asset.id)}
+                      className={cn(
+                        "min-w-0 rounded-md border p-3 text-left transition",
+                        isSelected
+                          ? "border-white/30 bg-white/9"
+                          : "border-white/10 bg-white/[0.035] hover:bg-white/6"
+                      )}
+                    >
+                      <div
+                        className={cn(
+                          "relative mx-auto w-full overflow-hidden rounded-md border border-white/10 bg-[#111] aspect-(--pack-ratio)",
+                          itemOrientation === "vertical" && "max-w-28",
+                          itemOrientation === "square" && "max-w-40",
+                          itemOrientation === "landscape" && "max-w-full"
+                        )}
+                        style={styleVars({
+                          "--pack-ratio": `${asset.width} / ${asset.height}`,
+                          "--studio-primary": form.primaryColor,
+                          "--studio-secondary": form.secondaryColor,
+                          "--studio-accent": platform.accent,
+                          "--studio-accent-soft": platform.accentSoft,
+                        })}
+                      >
+                        <div
+                          className="absolute inset-0 bg-cover bg-center opacity-40"
+                          style={{ backgroundImage: `url(${activeArtworkUrl})` }}
+                        />
+                        <div className="asset-preview-gradient absolute inset-0" />
+                        <div className="absolute left-0 top-0 h-full w-[2.4%] bg-(--studio-accent)" />
+                        <div
+                          className={cn(
+                            "absolute overflow-hidden rounded-sm border border-white/20 bg-white/5",
+                            itemOrientation === "landscape"
+                              ? "right-[7%] top-[12%] h-[44%] w-[30%]"
+                              : "left-[9%] top-[8%] h-[27%] w-[82%]"
+                          )}
+                        >
+                          <div
+                            className="h-full w-full bg-cover bg-center"
+                            style={{ backgroundImage: `url(${activeArtworkUrl})` }}
+                          />
+                        </div>
+                        <div
+                          className={cn(
+                            "absolute left-[8%] right-[8%] overflow-hidden",
+                            itemOrientation === "landscape"
+                              ? "bottom-[22%] right-[43%] top-[20%]"
+                              : "bottom-[30%] top-[43%]"
+                          )}
+                        >
+                          <div className="w-fit rounded-full bg-white/10 px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.12em] text-zinc-200">
+                            {asset.ratio}
+                          </div>
+                          <div
+                            className={cn(
+                              "mt-1 line-clamp-2 font-black leading-none text-white",
+                              itemOrientation === "landscape" ? "text-lg" : "text-base"
+                            )}
+                          >
+                            {form.thumbnailText || asset.name}
+                          </div>
+                        </div>
+                        <div className="absolute inset-x-[8%] bottom-[8%] flex h-4 items-center gap-0.5">
+                          {waveform.slice(0, 28).map((peak, index) => (
+                            <span
+                              key={index}
+                              className="block h-(--bar-height) flex-1 rounded-full bg-(--bar-color)"
+                              style={styleVars({
+                                "--bar-height": px(Math.max(3, peak * 15)),
+                                "--bar-color": index % 7 === 0 ? "#f8fafc" : form.primaryColor,
+                              })}
+                            />
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="mt-3 flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <h3 className="truncate text-sm font-black">{asset.name}</h3>
+                          <p className="mt-1 text-xs text-zinc-500">
+                            {asset.width} x {asset.height} / {asset.useCase}
+                          </p>
+                        </div>
+                        <span className="shrink-0 rounded-full bg-white/6 px-2 py-1 text-[11px] font-bold text-zinc-300">
+                          {asset.kind}
+                        </span>
+                      </div>
+                      <p className="mt-2 truncate rounded-md bg-black/30 px-2 py-1.5 font-mono text-[11px] text-zinc-500">
+                        {filename}
+                      </p>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </section>
@@ -1738,7 +2002,7 @@ export function PodVisualizer() {
                 target="_blank"
                 rel="noreferrer"
                 title={platform.sourceLabel}
-                className="inline-flex items-center gap-1 rounded-full border border-white/10 px-3 py-1.5 text-xs font-bold text-zinc-300 hover:bg-white/[0.06]"
+                className="inline-flex items-center gap-1 rounded-full border border-white/10 px-3 py-1.5 text-xs font-bold text-zinc-300 hover:bg-white/6"
               >
                 Source
                 <ExternalLink className="h-3.5 w-3.5" />
@@ -1756,8 +2020,8 @@ export function PodVisualizer() {
                     className={cn(
                       "rounded-md border p-3 text-left transition",
                       isSelected
-                        ? "border-white/30 bg-white/[0.09]"
-                        : "border-white/10 bg-white/[0.035] hover:bg-white/[0.06]"
+                        ? "border-white/30 bg-white/9"
+                        : "border-white/10 bg-white/[0.035] hover:bg-white/6"
                     )}
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -1774,7 +2038,7 @@ export function PodVisualizer() {
                         </div>
                         <p className="mt-1 text-xs text-zinc-500">{asset.useCase}</p>
                       </div>
-                      <span className="rounded-full bg-white/[0.06] px-2 py-1 text-[11px] font-bold text-zinc-300">
+                      <span className="rounded-full bg-white/6 px-2 py-1 text-[11px] font-bold text-zinc-300">
                         {asset.ratio}
                       </span>
                     </div>
@@ -1800,7 +2064,7 @@ export function PodVisualizer() {
                     <button
                       type="button"
                       onClick={() => void copyText("Requirement", requirement)}
-                      className="flex w-full gap-2 rounded-md px-2 py-1.5 text-left text-sm leading-5 text-zinc-300 transition hover:bg-white/[0.06]"
+                      className="flex w-full gap-2 rounded-md px-2 py-1.5 text-left text-sm leading-5 text-zinc-300 transition hover:bg-white/6"
                     >
                     <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#1ed760]" />
                     <span>{requirement}</span>
@@ -1817,7 +2081,7 @@ export function PodVisualizer() {
               </div>
               <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
                 <div
-                  className="h-full w-[var(--ready-width)] rounded-full bg-[#1ed760]"
+                  className="h-full w-(--ready-width) rounded-full bg-[#1ed760]"
                   style={previewVars}
                 />
               </div>
@@ -1842,7 +2106,7 @@ export function PodVisualizer() {
                 <button
                   type="button"
                   onClick={() => void copyText("Title", generatedCopy.title)}
-                  className="block w-full rounded-md p-2 text-left transition hover:bg-white/[0.06]"
+                  className="block w-full rounded-md p-2 text-left transition hover:bg-white/6"
                 >
                   <p className="text-xs font-bold uppercase tracking-[0.16em] text-zinc-500">
                     Title
@@ -1852,7 +2116,7 @@ export function PodVisualizer() {
                 <button
                   type="button"
                   onClick={() => void copyText("Caption", generatedCopy.caption)}
-                  className="block w-full rounded-md p-2 text-left transition hover:bg-white/[0.06]"
+                  className="block w-full rounded-md p-2 text-left transition hover:bg-white/6"
                 >
                   <p className="text-xs font-bold uppercase tracking-[0.16em] text-zinc-500">
                     Caption
@@ -1865,7 +2129,7 @@ export function PodVisualizer() {
                       key={tag}
                       type="button"
                       onClick={() => void copyText("Hashtag", tag)}
-                      className="rounded-full bg-white/[0.06] px-2.5 py-1 text-xs transition hover:bg-[#1ed760] hover:text-black"
+                      className="rounded-full bg-white/6 px-2.5 py-1 text-xs transition hover:bg-[#1ed760] hover:text-black"
                     >
                       {tag}
                     </button>
@@ -1883,6 +2147,16 @@ export function PodVisualizer() {
               >
                 <Download className="h-4 w-4" />
                 Export {platform.name} Pack
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => void exportContactSheet()}
+                disabled={isExporting}
+                className="bg-white text-black hover:bg-[#1ed760]"
+              >
+                <ImageIcon className="h-4 w-4" />
+                Export Contact Sheet
               </Button>
               <div className="grid grid-cols-2 gap-2">
                 <Button
@@ -1903,7 +2177,7 @@ export function PodVisualizer() {
                       `${sanitizeFilename(form.episodeTitle || "podcast")}-${platform.id}-brief.json`
                     )
                   }
-                  className="border-white/10 bg-transparent text-white hover:bg-white/[0.08] hover:text-white"
+                  className="border-white/10 bg-transparent text-white hover:bg-white/8 hover:text-white"
                 >
                   <Clipboard className="h-4 w-4" />
                   JSON
