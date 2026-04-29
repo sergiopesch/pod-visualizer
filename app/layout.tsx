@@ -10,7 +10,7 @@ const geistSans = localFont({
 export const metadata: Metadata = {
   title: "Podcast Asset Studio",
   description:
-    "One-page podcast and video asset generator for YouTube, Spotify, X, and TikTok.",
+    "One-page podcast and video asset generator for YouTube, Spotify, and X.",
 };
 
 export default function RootLayout({
