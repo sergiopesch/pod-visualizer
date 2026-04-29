@@ -83,7 +83,7 @@ async function exportAssets() {
 
   for (const [platform, assets] of Object.entries(platformAssets)) {
     await page
-      .getByRole("button", { name: new RegExp(`^${escapeRegex(platform)}\\b`) })
+      .getByRole("button", { name: new RegExp(`^(Select\\s+)?${escapeRegex(platform)}\\b`) })
       .first()
       .click();
     await page.waitForTimeout(150);
