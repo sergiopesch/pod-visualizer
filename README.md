@@ -1,23 +1,48 @@
 # Podcast Asset Studio
 
-A one-page production workspace for creating podcast and video launch assets across three high-priority creator platforms: YouTube, Spotify, and X.
+A one-page production workspace for creating podcast and video launch assets across three creator platforms: YouTube, Spotify, and X.
 
-## What It Does
+![Podcast Asset Studio application screenshot](docs/readme-hero.png)
 
-- Generates platform-aware visual frames, AI thumbnail backgrounds, covers, and waveform cards.
-- Uses MrBeast-inspired packaging rules: short visual hooks, title/thumbnail curiosity gap, fast payoff, and high contrast.
-- Includes current spec notes for common creator workflows across the three platforms.
-- Produces generated titles, captions, hashtags, and a JSON production brief.
-- Supports page-wide drag and drop for local cover art and audio uploads.
-- Exports selected PNG assets, contact sheets, or platform packs directly from the browser.
+## Product
+
+Podcast Asset Studio turns one episode idea into a platform-ready visual pack. It combines episode metadata, packaging presets, AI-generated thumbnail backgrounds, real platform brand marks, waveform styling, generated copy, and export checks in a single browser workspace.
+
+The product intentionally supports only YouTube, Spotify, and X. TikTok and other platforms are out of scope.
+
+## Features
+
+- Platform-aware asset packs for YouTube, Spotify, and X.
+- Real platform logo marks from `simple-icons`.
+- Bundled AI-generated thumbnail backgrounds for each supported platform.
+- Browser-based PNG export for individual assets.
+- Platform pack export for all assets in the selected platform.
+- Contact sheet export for reviewing a full platform pack before download.
+- Generated title, caption, hashtags, and JSON production brief.
+- Drag-and-drop local artwork and audio uploads.
+- Audio waveform fallback and decoded waveform rendering when source audio is available.
+- Release checks for thumbnail length, title/caption fit, platform selection, artwork, and waveform readiness.
 
 ## Platform Packs
 
-- YouTube: long-form master, Shorts frame, thumbnail, podcast playlist art.
-- Spotify: video podcast, show cover, episode cover, audio card.
-- X: vertical video, square timeline clip, launch card, quote card.
+| Platform | Assets |
+| --- | --- |
+| YouTube | Episode Master, Shorts Frame, Thumbnail, Podcast Playlist Art |
+| Spotify | Video Podcast, Show Cover, Episode Cover, Audio Card |
+| X | Vertical Video, Timeline Square, Launch Card, Quote Card |
 
-Spec snapshot in the UI was verified on April 28, 2026 using official platform documentation.
+Spec notes in the UI were verified on April 28, 2026 using official platform documentation.
+
+## Tech Stack
+
+- Next.js 16
+- React 19
+- Tailwind CSS 4
+- Radix UI primitives
+- lucide-react
+- simple-icons
+- Playwright
+- sharp
 
 ## Getting Started
 
@@ -30,16 +55,30 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Validation
 
+Run the standard local checks:
+
 ```bash
+npm audit --audit-level=moderate
 npm run lint
 npm run build
 ```
 
-For export validation, start the production server and run the browser export sweep:
+Run the browser export QA sweep against a production server:
 
 ```bash
 PORT=3002 npm run start
 EXPORT_QA_URL=http://localhost:3002 npm run qa:exports
 ```
 
-The app is built with Next.js, React, Tailwind CSS, Radix UI primitives, lucide-react icons, simple-icons brand marks, and Playwright-ready Computer Use dependencies.
+`npm run qa:exports` downloads and verifies 15 generated PNGs: 12 platform assets plus one contact sheet for YouTube, Spotify, and X. It checks dimensions, file size, nonblank pixel range, and verifies that unsupported platform copy is not rendered.
+
+## CI
+
+GitHub Actions runs the same release gate on pull requests and pushes to `main`:
+
+- `npm ci`
+- Chromium install for Playwright export QA
+- `npm audit --audit-level=moderate`
+- `npm run lint`
+- `npm run build`
+- `npm run qa:exports`
